@@ -12,8 +12,8 @@ from torch.autograd import Variable
 from fscore import fscore
 
 def test_chamfer(distChamfer, dim):
-    points1 = torch.rand(4, 100, dim).cuda()
-    points2 = torch.rand(4, 200, dim, requires_grad=True).cuda()
+    points1 = torch.rand(4, 100, dim).to('cuda')
+    points2 = torch.rand(4, 200, dim, requires_grad=True).to('cuda')
     dist1, dist2, idx1, idx2= distChamfer(points1, points2)
 
     loss = torch.sum(dist1)
@@ -36,8 +36,8 @@ def test_chamfer(distChamfer, dim):
 
 
 def timings(distChamfer, dim):
-    p1 = torch.rand(32, 2000, dim).cuda()
-    p2 = torch.rand(32, 1000, dim).cuda()
+    p1 = torch.rand(32, 2000, dim).to('cuda')
+    p2 = torch.rand(32, 1000, dim).to('cuda')
     print("Timings : Start CUDA version")
     start = time.time()
     num_it = 100

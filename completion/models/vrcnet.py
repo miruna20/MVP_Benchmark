@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from model_utils import *
 from models.pcn import PCN_encoder
 
+device = 'cuda'
 # proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # sys.path.append(os.path.join(proj_dir, "utils/Pointnet2.PyTorch/pointnet2"))
 # import pointnet2_utils as pn2
@@ -86,7 +87,7 @@ class Folding(nn.Module):
             batch_size,
             -1, num_features).transpose(1, 2).contiguous()
         global_feat = global_feat.unsqueeze(2).repeat(1, 1, num_points * self.step_ratio).repeat(self.num_models, 1, 1)
-        grid_feat = self.grid.unsqueeze(0).repeat(batch_size, num_points, 1).transpose(1, 2).contiguous().cuda()
+        grid_feat = self.grid.unsqueeze(0).repeat(batch_size, num_points, 1).transpose(1, 2).contiguous().to(device)
         features = torch.cat([global_feat, point_feat, grid_feat], axis=1)
         features = F.relu(self.conv(features))
         return features
@@ -361,9 +362,9 @@ class MSAP_SKN_decoder(nn.Module):
         org_points_input = point_input
 
         if self.points_label:
-            id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).cuda().contiguous()
+            id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
             coarse_input = torch.cat( (coarse_raw, id0), 1)
-            id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).cuda().contiguous()
+            id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
             org_points_input = torch.cat( (org_points_input, id1), 1)
         else:
             coarse_input = coarse_raw

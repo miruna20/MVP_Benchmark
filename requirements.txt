@@ -1,0 +1,8 @@
+h5py
+matplotlib
+munch
+open3d
+PyYAML
+ninja
+future
+polyaxon-client

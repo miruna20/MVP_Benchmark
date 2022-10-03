@@ -40,7 +40,7 @@ class PCN_decoder(nn.Module):
         self.fc3 = nn.Linear(1024, num_coarse * 3)
 
         self.scale = scale
-        self.grid = gen_grid_up(2 ** (int(math.log2(scale))), 0.05).cuda().contiguous()
+        self.grid = gen_grid_up(2 ** (int(math.log2(scale))), 0.05).to('cuda').contiguous()
         self.conv1 = nn.Conv1d(cat_feature_num, 512, 1)
         self.conv2 = nn.Conv1d(512, 512, 1)
         self.conv3 = nn.Conv1d(512, 3, 1)
@@ -52,7 +52,7 @@ class PCN_decoder(nn.Module):
         coarse = self.fc3(coarse).view(-1, 3, self.num_coarse)
 
         grid = self.grid.clone().detach()
-        grid_feat = grid.unsqueeze(0).repeat(batch_size, 1, self.num_coarse).contiguous().cuda()
+        grid_feat = grid.unsqueeze(0).repeat(batch_size, 1, self.num_coarse).contiguous().to('cuda')
 
         point_feat = (
             (coarse.transpose(1, 2).contiguous()).unsqueeze(2).repeat(1, 1, self.scale, 1).view(-1, self.num_fine,

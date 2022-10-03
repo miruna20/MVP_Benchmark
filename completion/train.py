@@ -1,3 +1,5 @@
+import subprocess
+
 import torch.optim as optim
 import torch
 # from utils.train_utils import *
@@ -13,12 +15,18 @@ import os
 import sys
 import argparse
 from dataset import MVP_CP
+import os
+
+# import wandb
 
 import warnings
 warnings.filterwarnings("ignore")
 
+device = 'cuda'
+device_ids = [0]
 
-def train():
+
+def train(cluster=False):
     logging.info(str(args))
     if args.eval_emd:
         metrics = ['cd_p', 'cd_t', 'emd', 'f1']
@@ -28,8 +36,8 @@ def train():
     train_loss_meter = AverageValueMeter()
     val_loss_meters = {m: AverageValueMeter() for m in metrics}
 
-    dataset = MVP_CP(prefix="train")
-    dataset_test = MVP_CP(prefix="val")
+    dataset = MVP_CP(cluster=cluster,prefix="train")
+    dataset_test = MVP_CP(cluster=cluster, prefix="val")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                                             shuffle=True, num_workers=int(args.workers))
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
@@ -46,16 +54,22 @@ def train():
     torch.manual_seed(seed)
 
     model_module = importlib.import_module('.%s' % args.model_name, 'models')
-    net = torch.nn.DataParallel(model_module.Model(args))
-    net.cuda()
+    if(cluster):
+        net = torch.nn.DataParallel(model_module.Model(args))
+    else:
+        net = torch.nn.DataParallel(model_module.Model(args),device_ids=device_ids)
+    net.to(device)
     if hasattr(model_module, 'weights_init'):
         net.module.apply(model_module.weights_init)
 
     cascade_gan = (args.model_name == 'cascade')
     net_d = None
     if cascade_gan:
-        net_d = torch.nn.DataParallel(model_module.Discriminator(args))
-        net_d.cuda()
+        if(cluster):
+            net_d = torch.nn.DataParallel(model_module.Discriminator(args))
+        else:
+            net_d = torch.nn.DataParallel(model_module.Discriminator(args), device_ids=device_ids)
+        net_d.to(device)
         net_d.module.apply(model_module.weights_init)
 
     lr = args.lr
@@ -127,8 +141,8 @@ def train():
             _, inputs, gt = data
             # mean_feature = None
 
-            inputs = inputs.float().cuda()
-            gt = gt.float().cuda()
+            inputs = inputs.float().to(device)
+            gt = gt.float().to(device)
             inputs = inputs.transpose(2, 1).contiguous()
             # out2, loss2, net_loss = net(inputs, gt, mean_feature=mean_feature, alpha=alpha)
             out2, loss2, net_loss = net(inputs, gt, alpha=alpha)
@@ -138,13 +152,13 @@ def train():
                 discriminator_step(net_d, gt, d_fake, optimizer_d)
             else:
                 train_loss_meter.update(net_loss.mean().item())
-                net_loss.backward(torch.squeeze(torch.ones(torch.cuda.device_count())).cuda())
+                net_loss.backward(torch.squeeze(torch.ones(1).to(device)))
                 optimizer.step()
 
             if i % args.step_interval_to_print == 0:
                 logging.info(exp_name + ' train [%d: %d/%d]  loss_type: %s, fine_loss: %f total_loss: %f lr: %f' %
                              (epoch, i, len(dataset) / args.batch_size, args.loss, loss2.mean().item(), net_loss.mean().item(), lr) + ' alpha: ' + str(alpha))
-
+                # wandb.log({"fine loss":loss2.mean().item(),"net_loss":net_loss.mean.item()})
         if epoch % args.epoch_interval_to_save == 0:
             save_model('%s/network.pth' % log_dir, net, net_d=net_d)
             logging.info("Saving net...")
@@ -165,8 +179,8 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             # mean_feature = None
             curr_batch_size = gt.shape[0]
 
-            inputs = inputs.float().cuda()
-            gt = gt.float().cuda()
+            inputs = inputs.float().to(device)
+            gt = gt.float().to(device)
             inputs = inputs.transpose(2, 1).contiguous()
             result_dict = net(inputs, gt, prefix="val")
             for k, v in val_loss_meters.items():
@@ -195,9 +209,21 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train config file')
     parser.add_argument('-c', '--config', help='path to config file', required=True)
+    parser.add_argument(
+        "--cluster",
+        dest="cluster",
+        default=False,
+        action="store_true",
+        help="If set, training on cluster will be enabled",
+    )
     arg = parser.parse_args()
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
+
+
+
+    # wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
+    # wandb.init(project="VRCNet-Training")
 
     time = datetime.datetime.now().isoformat()[:19]
     if args.load_model:
@@ -205,12 +231,21 @@ if __name__ == "__main__":
         log_dir = os.path.dirname(args.load_model)
     else:
         exp_name = args.model_name + '_' + args.loss + '_' + args.flag + '_' + time
-        log_dir = os.path.join(args.work_dir, exp_name)
+
+        if(arg.cluster):
+            from polyaxon_client.tracking import Experiment, get_data_paths, get_outputs_path
+
+            output_directory = get_outputs_path()
+            log_dir = os.path.join(output_directory,args.work_dir, exp_name)
+
+        else:
+            log_dir = os.path.join(args.work_dir, exp_name)
+
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'train.log')),
                                                       logging.StreamHandler(sys.stdout)])
-    train()
+    train(arg.cluster)
 
 
 

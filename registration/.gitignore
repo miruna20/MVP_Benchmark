@@ -1,8 +1,0 @@
-/.idea/*
-/.DS_Store
-/log/*
-*/**/__pycache__
-/__pycache__/*
-*.h5
-*.backup
-gmcnet.py

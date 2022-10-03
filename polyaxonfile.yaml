@@ -1,0 +1,42 @@
+---
+version: 1
+
+kind: experiment
+
+framework: pytorch
+
+tags: [examples]
+ 
+build:
+  image: pytorch/pytorch:1.5.1-cuda10.1-cudnn7-devel
+  #image: pytorch/pytorch:1.12.0-cuda11.3-cudnn8-devel
+  build_steps:
+    # - apt-get upgrade -y
+    - apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+    - apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub 37
+    - apt-get update -y
+    - apt-get install gcc-6 g++-6 -y
+    #- apt-get install g++ -y
+    - apt-get install git -y
+    - apt-get install locate
+    - apt-get install ffmpeg libsm6 libxext6  -y
+    - pip install -r requirements.txt
+environment:
+  resources:
+    cpu:
+      requests: 4
+      limits: 10
+    memory:
+      requests: 30720
+      limits: 51200
+    gpu:
+      requests: 1
+      limits: 1
+  
+run:
+  cmd:
+    - pip install --upgrade pip
+    - pip install markupsafe==2.0.1
+    - sh setup.sh
+    #- python3 completion/train.py -c completion/cfgs/vrcnet_train.yaml --cluster
+    - python3 completion/test.py -c completion/cfgs/vrcnet_test.yaml --cluster
