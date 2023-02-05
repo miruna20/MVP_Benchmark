@@ -15,16 +15,17 @@ import os
 import sys
 import argparse
 from dataset import MVP_CP
+from dataset import verse2020_lumbar
 import os
 
 # import wandb
-
+#TODO after testing the training pipeline push the changes code to github
 import warnings
 warnings.filterwarnings("ignore")
 
-device = 'cuda'
-device_ids = [0]
 
+device_ids = [0]
+device = 'cuda'
 
 def train(cluster=False):
     logging.info(str(args))
@@ -36,8 +37,18 @@ def train(cluster=False):
     train_loss_meter = AverageValueMeter()
     val_loss_meters = {m: AverageValueMeter() for m in metrics}
 
-    dataset = MVP_CP(cluster=cluster,prefix="train")
-    dataset_test = MVP_CP(cluster=cluster, prefix="val")
+    dataset = verse2020_lumbar(train_path=args.path_to_train_dataset,
+                               val_path=args.path_to_val_dataset,
+                               test_path=args.path_to_test_dataset,
+                               cluster=cluster,
+                               prefix = "train",
+                               num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
+    dataset_test = verse2020_lumbar(train_path=args.path_to_train_dataset,
+                                    val_path=args.path_to_val_dataset,
+                                    test_path=args.path_to_test_dataset,
+                                    cluster=cluster,
+                                    prefix="val",
+                                    num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                                             shuffle=True, num_workers=int(args.workers))
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
@@ -220,10 +231,10 @@ if __name__ == "__main__":
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
 
-
-
     # wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
     # wandb.init(project="VRCNet-Training")
+
+    torch.cuda.empty_cache()
 
     time = datetime.datetime.now().isoformat()[:19]
     if args.load_model:

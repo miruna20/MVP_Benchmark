@@ -22,7 +22,6 @@ from mm3d_pn2 import furthest_point_sample, gather_points, grouping_operation, b
 
 # from ..utils import cd, fscore, emd, furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
 
-
 class EF_expansion(nn.Module):
     def __init__(self, input_size, output_size=64, step_ratio=2, k=4):
         super(EF_expansion, self).__init__()

@@ -1,10 +1,15 @@
-batch_size: 16
+batch_size: 8
 workers: 0
 nepoch: 100
 model_name: vrcnet
 load_model: False
 start_epoch: 0
 num_points: 2048
+num_partial_scans_per_mesh: 1
+path_to_train_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/lumbar_vertebrae_training_pcd_from_US.h5
+path_to_val_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/lumbar_vertebrae_validation_pcd_from_US.h5
+path_to_test_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/lumbar_vertebrae_testing_pcd_from_US.h5
+
 work_dir: log/
 flag: debug
 loss: cd

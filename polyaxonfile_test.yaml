@@ -27,8 +27,8 @@ environment:
       requests: 4
       limits: 10
     memory:
-      requests: 30720
-      limits: 51200
+      requests: 12384
+      limits: 16384
     gpu:
       requests: 1
       limits: 1
@@ -38,5 +38,4 @@ run:
     - pip install --upgrade pip
     - pip install markupsafe==2.0.1
     - sh setup.sh
-    #- python3 completion/train.py -c completion/cfgs/vrcnet_train.yaml --cluster
-    - python3 completion/test.py -c completion/cfgs/vrcnet_test.yaml --cluster
+    - python3 completion/test.py -c completion/cfgs/vrcnet_test_polyaxon.yaml --cluster

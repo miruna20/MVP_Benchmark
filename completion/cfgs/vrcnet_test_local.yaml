@@ -2,7 +2,12 @@ batch_size: 16
 workers: 0
 nepoch: 100
 model_name: vrcnet
-load_model: completion/model/model_vertebrae_500/best_cd_t_network.pth
+load_model: completion/model/model_lumbar_verse20_experiment104486/best_cd_t_network_exp104486.pth
+num_partial_scans_per_mesh: 16
+path_to_train_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_train.h5
+path_to_val_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_val.h5
+path_to_test_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_test.h5
+data_to_test: test
 start_epoch: 0
 num_points: 2048
 work_dir: log/
@@ -39,4 +44,4 @@ num_coarse: 2048
 
 # test
 save_vis: False
-eval_emd: False
+eval_emd: True

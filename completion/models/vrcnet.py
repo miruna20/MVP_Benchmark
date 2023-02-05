@@ -517,12 +517,15 @@ class Model(nn.Module):
             total_train_loss = loss1.mean() * 10 + loss2.mean() * 0.5 + loss3.mean() + loss4.mean() * alpha
             total_train_loss += (dl_rec.mean() + dl_g.mean()) * 20
             return fine, loss4, total_train_loss
-        elif prefix=="val":
+        elif prefix=="val" or prefix=="test":
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
             else:
                 emd = 0
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
-            return {'out1': coarse_raw, 'out2': fine, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
+            return {'out1': coarse_raw, 'result': fine, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
+        """
         elif prefix=="test":
             return {'result': fine}
+
+        """
