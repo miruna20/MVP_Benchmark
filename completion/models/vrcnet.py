@@ -7,6 +7,7 @@ import torch.nn.functional as F
 # from utils.model_utils import *
 from model_utils import *
 from models.pcn import PCN_encoder
+import open3d as o3d
 
 device = 'cuda'
 # proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -417,10 +418,12 @@ class Model(nn.Module):
         layers = [int(i) for i in args.layers.split(',')]
         knn_list = [int(i) for i in args.knn_list.split(',')]
 
+        self.num_points = args.num_points
         self.size_z = size_z
         self.distribution_loss = args.distribution_loss
         self.train_loss = args.loss
         self.eval_emd = args.eval_emd
+        self.align = args.align
         self.encoder = PCN_encoder(output_size=global_feature_size)
         self.posterior_infer1 = Linear_ResBlock(input_size=global_feature_size, output_size=global_feature_size)
         self.posterior_infer2 = Linear_ResBlock(input_size=global_feature_size, output_size=size_z * 2)
@@ -446,10 +449,25 @@ class Model(nn.Module):
         return torch.mean(x_kernel) + torch.mean(y_kernel) - 2 * torch.mean(xy_kernel)
 
     def forward(self, x, gt=None, prefix="train", mean_feature=None, alpha=None):
-        num_input = x.size()[2]
+
+        # gt has shape (1, 4096, 3) --> B =1 , N= 4096, 3=3
+        # x has shape (1, 8192, 3) --> B= 1, N= 8192, 3=3
+        # furthest point sampling ( points(B,N,3), int)
+        # gather points (features (B,C,N), indices(B,M)
+        #a = x.cpu().numpy()[0]
+        #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_without_fps.npy", a)
+
+        # sample num_points from input x both in the train and val or test scenario
+        x = gather_points(x, furthest_point_sample(x.transpose(1,2).contiguous(), self.num_points))
+
+        #a = x.cpu().numpy()[0]
+        #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_after_fps.npy", a)
 
         if prefix=="train":
-            y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, num_input))
+            y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
+            #a = y.cpu().numpy()[0]
+            #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/GT.npy", a)
+
             gt = torch.cat([gt, gt], dim=0)
             points = torch.cat([x, y], dim=0)
             x = torch.cat([x, x], dim=0)
@@ -518,6 +536,30 @@ class Model(nn.Module):
             total_train_loss += (dl_rec.mean() + dl_g.mean()) * 20
             return fine, loss4, total_train_loss
         elif prefix=="val" or prefix=="test":
+            if self.align:
+                fine_results_aligned = []
+                # iterate over all point clouds in batch size
+                fine_cpu = fine.cpu().numpy()
+                gt_cpu = gt.cpu().numpy()
+                for pcd_idx in range(fine_cpu.shape[0]):
+                    # create point cloud from completion
+                    completion_pcd = o3d.geometry.PointCloud()
+                    # TODO check if fine is on GPU, check what shape it has
+                    completion_pcd.points = o3d.utility.Vector3dVector(fine_cpu[pcd_idx])
+
+                    # create point cloud from GT
+                    GT_pcd = o3d.geometry.PointCloud()
+                    GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
+
+                    reg_p2p = o3d.registration.registration_icp(completion_pcd,GT_pcd,0.02)
+
+                    #apply trafo on the completion pcd
+                    completion_pcd.transform(reg_p2p.transformation)
+                    fine_results_aligned.append(np.asarray(completion_pcd.points))
+
+                # stack them back
+                fine = np.stack(fine_results_aligned)
+                fine = torch.tensor(fine).float().to(device)
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
             else:

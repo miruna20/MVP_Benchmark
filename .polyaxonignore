@@ -1,4 +1,3 @@
-
 .git
 .eggs
 eggs
@@ -18,4 +17,7 @@ var
 vrcnet_cd_debug*
 *.pth
 *.log
-
+*.npy
+.idea/
+log/
+completion/model/

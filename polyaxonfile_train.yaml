@@ -1,11 +1,11 @@
----
+
 version: 1
 
 kind: experiment
 
 framework: pytorch
 
-tags: [examples]
+tags: [training_vrcnet]
  
 build:
   image: pytorch/pytorch:1.5.1-cuda10.1-cudnn7-devel
@@ -27,11 +27,14 @@ environment:
       requests: 4
       limits: 10
     memory:
-      requests: 12384
-      limits: 16384
+      requests: 16000
+      limits: 20000
     gpu:
       requests: 1
       limits: 1
+  node_selector:
+    kubernetes.io/hostname: iego
+    #gpuMemory: "12"    
   
 run:
   cmd:

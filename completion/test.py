@@ -19,12 +19,15 @@ warnings.filterwarnings("ignore")
 device = 'cuda'
 device_ids = [0]
 
-#TODO after testing the training pipeline push the changes code to github
 def test(cluster=False):
+    logging.info(str(args))
+
     prefix = args.data_to_test
     dataset_test = verse2020_lumbar(train_path=args.path_to_train_dataset,
                                     val_path=args.path_to_val_dataset,
                                     test_path=args.path_to_test_dataset,
+                                    apply_trafo=args.apply_trafo,
+                                    sigma = args.sigma,
                                     prefix=prefix,
                                     cluster=cluster,
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
@@ -52,7 +55,10 @@ def test(cluster=False):
     net.eval()
 
     # metrics we would like to compute
-    metrics = ['cd_p', 'cd_t', 'emd', 'f1']
+    if(args.eval_emd):
+        metrics = ['cd_p', 'cd_t', 'emd', 'f1']
+    else:
+        metrics = ['cd_p', 'cd_t', 'f1']
 
     # dictionary with all of the metrics
     test_loss_meters = {m: AverageValueMeter() for m in metrics}
@@ -106,7 +112,8 @@ def test(cluster=False):
 
             # append the current shape completion results to the list
             results_list.append(result_dict['result'].cpu().numpy())
-            emd.append(result_dict['emd'].cpu().numpy())
+            if(args.eval_emd):
+                emd.append(result_dict['emd'].cpu().numpy())
             cd_p.append(result_dict['cd_p'].cpu().numpy())
             cd_t.append(result_dict['cd_t'].cpu().numpy())
             f1.append(result_dict['f1'].cpu().numpy())
@@ -132,14 +139,16 @@ def test(cluster=False):
         logging.info(overview_log)
 
         all_results = np.concatenate(results_list, axis=0)
-        all_emd = np.concatenate(emd, axis=0)
+        if(args.eval_emd):
+            all_emd = np.concatenate(emd, axis=0)
         all_cd_p = np.concatenate(cd_p, axis=0)
         all_cd_t = np.concatenate(cd_t, axis=0)
         all_f1 = np.concatenate(f1, axis=0)
 
         with h5py.File(log_dir + '/results.h5', 'w') as f:
             f.create_dataset('results', data=all_results)
-            f.create_dataset('emd', data=all_emd)
+            if(args.eval_emd):
+                f.create_dataset('emd', data=all_emd)
             f.create_dataset('cd_p', data=all_cd_p)
             f.create_dataset('cd_t', data=all_cd_t)
             f.create_dataset('f1', data=all_f1)

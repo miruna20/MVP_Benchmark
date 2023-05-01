@@ -4,12 +4,11 @@ nepoch: 100
 model_name: vrcnet
 load_model: False
 start_epoch: 0
-num_points: 2048
+num_points: 4096
 num_partial_scans_per_mesh: 1
-path_to_train_dataset: completion/data/lumbar_vertebrae_training_pcd_from_US.h5
-path_to_val_dataset: completion/data/lumbar_vertebrae_validation_pcd_from_US.h5
-path_to_test_dataset: completion/data/lumbar_vertebrae_testing_pcd_from_US.h5
-
+path_to_train_dataset: completion/data/new_pipeline/noisy/FPS/dataset_training_verse.h5 
+path_to_val_dataset: completion/data/new_pipeline/noisy/FPS/dataset_validation_verse.h5
+path_to_test_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_test_verse.h5
 work_dir: log/
 flag: debug
 loss: cd
@@ -38,10 +37,14 @@ knn_list: "16"
 pk: 10
 local_folding: True
 points_label: True
-num_coarse_raw: 1024
-num_fps: 2048
-num_coarse: 2048
+num_coarse_raw: 2048
+num_fps: 4096
+num_coarse: 4096
+
+apply_trafo: True
+sigma: 0.005
 
 # test
+align: False
 save_vis: False
 eval_emd: False

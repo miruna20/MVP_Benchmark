@@ -1,15 +1,18 @@
-batch_size: 16
+batch_size: 2
 workers: 0
 nepoch: 100
 model_name: vrcnet
-load_model: completion/model/model_lumbar_verse20_experiment104486/best_cd_t_network_exp104486.pth
-num_partial_scans_per_mesh: 16
-path_to_train_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_train.h5
-path_to_val_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_val.h5
-path_to_test_dataset: completion/data/datasets_for_shape_completion/verse20_lumbarVert_test.h5
+load_model: /mnt/HDD1/miruna/shape_completion/model/model_new_pipeline/best_cd_t_network_exp108401.pth
+num_partial_scans_per_mesh: 1
+path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_training_verse_clean.h5
+path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_verse_clean.h5
+#path_to_test_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_test_verse_clean.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_Maria.h5
+path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
 data_to_test: test
 start_epoch: 0
-num_points: 2048
+num_points: 4096
 work_dir: log/
 flag: debug
 loss: cd
@@ -38,10 +41,14 @@ knn_list: "16"
 pk: 10
 local_folding: True
 points_label: True
-num_coarse_raw: 1024
-num_fps: 2048
-num_coarse: 2048
+num_coarse_raw: 2048
+num_fps: 4096
+num_coarse: 4096
+
+apply_trafo: False
+sigma: 0.005
 
 # test
+align: True
 save_vis: False
-eval_emd: True
+eval_emd: False

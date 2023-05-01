@@ -40,15 +40,21 @@ def train(cluster=False):
     dataset = verse2020_lumbar(train_path=args.path_to_train_dataset,
                                val_path=args.path_to_val_dataset,
                                test_path=args.path_to_test_dataset,
+                               apply_trafo=args.apply_trafo,
+                               sigma = args.sigma,
                                cluster=cluster,
                                prefix = "train",
-                               num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
+                               num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
+                               )
     dataset_test = verse2020_lumbar(train_path=args.path_to_train_dataset,
                                     val_path=args.path_to_val_dataset,
                                     test_path=args.path_to_test_dataset,
+                                    apply_trafo=args.apply_trafo,
+                                    sigma=args.sigma,
                                     cluster=cluster,
                                     prefix="val",
-                                    num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
+                                    num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
+                                   )
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                                             shuffle=True, num_workers=int(args.workers))
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
