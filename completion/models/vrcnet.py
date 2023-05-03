@@ -458,7 +458,7 @@ class Model(nn.Module):
         #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_without_fps.npy", a)
 
         # sample num_points from input x both in the train and val or test scenario
-        x = gather_points(x, furthest_point_sample(x.transpose(1,2).contiguous(), self.num_points))
+        #x = gather_points(x, furthest_point_sample(x.transpose(1,2).contiguous(), self.num_points))
 
         #a = x.cpu().numpy()[0]
         #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_after_fps.npy", a)
@@ -537,35 +537,34 @@ class Model(nn.Module):
             return fine, loss4, total_train_loss
         elif prefix=="val" or prefix=="test":
             if self.align:
-                fine_results_aligned = []
+                gts_aligned = []
                 # iterate over all point clouds in batch size
                 fine_cpu = fine.cpu().numpy()
                 gt_cpu = gt.cpu().numpy()
                 for pcd_idx in range(fine_cpu.shape[0]):
                     # create point cloud from completion
                     completion_pcd = o3d.geometry.PointCloud()
-                    # TODO check if fine is on GPU, check what shape it has
                     completion_pcd.points = o3d.utility.Vector3dVector(fine_cpu[pcd_idx])
 
                     # create point cloud from GT
                     GT_pcd = o3d.geometry.PointCloud()
                     GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
 
-                    reg_p2p = o3d.registration.registration_icp(completion_pcd,GT_pcd,0.02)
+                    reg_p2p = o3d.registration.registration_icp(GT_pcd,completion_pcd,0.02)
 
                     #apply trafo on the completion pcd
-                    completion_pcd.transform(reg_p2p.transformation)
-                    fine_results_aligned.append(np.asarray(completion_pcd.points))
+                    GT_pcd.transform(reg_p2p.transformation)
+                    gts_aligned.append(np.asarray(GT_pcd.points))
 
                 # stack them back
-                fine = np.stack(fine_results_aligned)
-                fine = torch.tensor(fine).float().to(device)
+                gt = np.stack(gts_aligned)
+                gt = torch.tensor(gt).float().to(device)
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
             else:
                 emd = 0
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
-            return {'out1': coarse_raw, 'result': fine, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
+            return {'out1': coarse_raw, 'result': fine, 'gt':gt, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
         """
         elif prefix=="test":
             return {'result': fine}

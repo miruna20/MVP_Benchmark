@@ -129,14 +129,10 @@ def add_gaussian_noise(pcd, sigma):
     # sample a vector of size is from a gaussian distribution
     individual_points_shifts_y_axis = np.random.normal(loc=0.0, scale=sigma, size=pcd.shape[0])
 
-    # create the noisy pcd
-    noisy_pcd = pcd.copy()
-    noisy_pcd[:, 1] += individual_points_shifts_y_axis
+    # add noise
+    pcd[:, 1] += individual_points_shifts_y_axis
 
-    # concatenate the points from the noisy and original pointcloud
-    concat_pcd = np.concatenate((pcd,noisy_pcd))
-
-    return concat_pcd
+    return pcd
 
 
 

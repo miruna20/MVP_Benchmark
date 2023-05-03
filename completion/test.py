@@ -89,6 +89,7 @@ def test(cluster=False):
         cd_p = []
         cd_t = []
         f1 = []
+        gts_aligned = []
         for i, data in enumerate(dataloader_test):
 
             # inputs_cpu = data
@@ -117,7 +118,7 @@ def test(cluster=False):
             cd_p.append(result_dict['cd_p'].cpu().numpy())
             cd_t.append(result_dict['cd_t'].cpu().numpy())
             f1.append(result_dict['f1'].cpu().numpy())
-
+            gts_aligned.append(result_dict['gt'].cpu().numpy())
             if i % args.step_interval_to_print == 0:
                 logging.info('test [%d/%d]' % (i, dataset_length / args.batch_size))
 
@@ -144,6 +145,7 @@ def test(cluster=False):
         all_cd_p = np.concatenate(cd_p, axis=0)
         all_cd_t = np.concatenate(cd_t, axis=0)
         all_f1 = np.concatenate(f1, axis=0)
+        all_gt = np.concatenate(gts_aligned,axis=0)
 
         with h5py.File(log_dir + '/results.h5', 'w') as f:
             f.create_dataset('results', data=all_results)
@@ -152,6 +154,7 @@ def test(cluster=False):
             f.create_dataset('cd_p', data=all_cd_p)
             f.create_dataset('cd_t', data=all_cd_t)
             f.create_dataset('f1', data=all_f1)
+            f.create_dataset('gt', data=all_gt)
 
         cur_dir = os.getcwd()
         cmd = "cd %s; zip -r submission.zip results.h5 ; cd %s" % (log_dir, cur_dir)

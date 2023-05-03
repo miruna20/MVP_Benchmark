@@ -6,8 +6,8 @@ load_model: False
 start_epoch: 0
 num_points: 4096
 num_partial_scans_per_mesh: 1
-path_to_train_dataset: completion/data/new_pipeline/noisy/FPS/dataset_training_verse.h5 
-path_to_val_dataset: completion/data/new_pipeline/noisy/FPS/dataset_validation_verse.h5
+path_to_train_dataset: completion/data/new_pipeline/noisy/FPS/subsample_4096/dataset_training_4096.h5
+path_to_val_dataset: completion/data/new_pipeline/noisy/FPS/subsample_4096/dataset_validation_4096.h5
 path_to_test_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_test_verse.h5
 work_dir: log/
 flag: debug

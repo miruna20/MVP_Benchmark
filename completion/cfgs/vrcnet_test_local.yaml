@@ -2,7 +2,7 @@ batch_size: 2
 workers: 0
 nepoch: 100
 model_name: vrcnet
-load_model: /mnt/HDD1/miruna/shape_completion/model/model_new_pipeline/best_cd_t_network_exp108401.pth
+load_model: /mnt/HDD1/miruna/shape_completion/model/model_new_pipeline_polluted_FPS/best_cd_t_network.pth
 num_partial_scans_per_mesh: 1
 path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_training_verse_clean.h5
 path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_verse_clean.h5
@@ -10,6 +10,7 @@ path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_Maria.h5
 path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_FPS_no_noise/dataset_test_verse_subsample.h5
 data_to_test: test
 start_epoch: 0
 num_points: 4096
