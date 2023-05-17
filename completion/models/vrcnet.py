@@ -321,7 +321,6 @@ class MSAP_SKN_decoder(nn.Module):
         else:
             self.input_size = 3
 
-
         self.encoder = SA_SKN_Res_encoder(input_size=self.input_size, k=knn_list, pk=pk,
                                           output_size=self.dense_feature_size, layers=layers)
 
@@ -364,9 +363,9 @@ class MSAP_SKN_decoder(nn.Module):
 
         if self.points_label:
             id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
-            coarse_input = torch.cat( (coarse_raw, id0), 1)
+            coarse_input = torch.cat((coarse_raw, id0), 1)
             id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
-            org_points_input = torch.cat( (org_points_input, id1), 1)
+            org_points_input = torch.cat((org_points_input, id1), 1)
         else:
             coarse_input = coarse_raw
 
@@ -440,7 +439,7 @@ class Model(nn.Module):
 
         tiled_x = x.unsqueeze(1).repeat(1, y_size, 1)
         tiled_y = y.unsqueeze(0).repeat(x_size, 1, 1)
-        return torch.exp(-torch.mean((tiled_x - tiled_y)**2, dim=2) / float(dim))
+        return torch.exp(-torch.mean((tiled_x - tiled_y) ** 2, dim=2) / float(dim))
 
     def mmd_loss(self, x, y):
         x_kernel = self.compute_kernel(x, x)
@@ -454,19 +453,19 @@ class Model(nn.Module):
         # x has shape (1, 8192, 3) --> B= 1, N= 8192, 3=3
         # furthest point sampling ( points(B,N,3), int)
         # gather points (features (B,C,N), indices(B,M)
-        #a = x.cpu().numpy()[0]
-        #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_without_fps.npy", a)
+        # a = x.cpu().numpy()[0]
+        # np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_without_fps.npy", a)
 
         # sample num_points from input x both in the train and val or test scenario
-        #x = gather_points(x, furthest_point_sample(x.transpose(1,2).contiguous(), self.num_points))
+        # x = gather_points(x, furthest_point_sample(x.transpose(1,2).contiguous(), self.num_points))
 
-        #a = x.cpu().numpy()[0]
-        #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_after_fps.npy", a)
+        # a = x.cpu().numpy()[0]
+        # np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/input_with_noise_after_fps.npy", a)
 
-        if prefix=="train":
+        if prefix == "train":
             y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
-            #a = y.cpu().numpy()[0]
-            #np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/GT.npy", a)
+            # a = y.cpu().numpy()[0]
+            # np.save("/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/GT.npy", a)
 
             gt = torch.cat([gt, gt], dim=0)
             points = torch.cat([x, y], dim=0)
@@ -475,7 +474,7 @@ class Model(nn.Module):
             points = x
         feat = self.encoder(points)
 
-        if prefix=="train":
+        if prefix == "train":
             feat_x, feat_y = feat.chunk(2)
             o_x = self.posterior_infer2(self.posterior_infer1(feat_x))
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
@@ -510,7 +509,7 @@ class Model(nn.Module):
         coarse = coarse.transpose(1, 2).contiguous()
         fine = fine.transpose(1, 2).contiguous()
 
-        if prefix=="train":
+        if prefix == "train":
             if self.distribution_loss == 'MMD':
                 z_m = m_distribution.rsample()
                 z_q = q_distribution.rsample()
@@ -535,10 +534,12 @@ class Model(nn.Module):
             total_train_loss = loss1.mean() * 10 + loss2.mean() * 0.5 + loss3.mean() + loss4.mean() * alpha
             total_train_loss += (dl_rec.mean() + dl_g.mean()) * 20
             return fine, loss4, total_train_loss
-        elif prefix=="val" or prefix=="test":
+        elif prefix == "val" or prefix == "test":
             if self.align:
                 gts_aligned = []
+                inputs_aligned = []
                 # iterate over all point clouds in batch size
+                input_cpu = x.transpose(1, 2).contiguous().cpu().numpy()
                 fine_cpu = fine.cpu().numpy()
                 gt_cpu = gt.cpu().numpy()
                 for pcd_idx in range(fine_cpu.shape[0]):
@@ -550,21 +551,83 @@ class Model(nn.Module):
                     GT_pcd = o3d.geometry.PointCloud()
                     GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
 
-                    reg_p2p = o3d.registration.registration_icp(GT_pcd,completion_pcd,0.02)
+                    # perform the registration
+                    reg_p2p = o3d.registration.registration_icp(GT_pcd, completion_pcd, 0.02)
 
-                    #apply trafo on the completion pcd
+                    # apply trafo on the completion pcd
                     GT_pcd.transform(reg_p2p.transformation)
                     gts_aligned.append(np.asarray(GT_pcd.points))
+
+                    # create pcd from input
+                    input_pcd = o3d.geometry.PointCloud()
+                    input_pcd.points = o3d.utility.Vector3dVector(input_cpu[pcd_idx])
+
+                    # apply trafo on the input pcd
+                    input_pcd.transform(reg_p2p.transformation)
+                    inputs_aligned.append(np.asarray(input_pcd.points))
 
                 # stack them back
                 gt = np.stack(gts_aligned)
                 gt = torch.tensor(gt).float().to(device)
+                x = np.stack(inputs_aligned)
+                x = torch.tensor(x).float().to(device)
+
+            # compute the metrics only over the vertebral arch
+
+
+            # these will be list of tensors and in the end we stack them to one tensor
+            cds_p_arch = []
+            cds_t_arch = []
+            f1s_arch = []
+
+
+            for pcd_idx in range(fine_cpu.shape[0]):
+                # create point cloud from GT
+                GT_pcd = o3d.geometry.PointCloud()
+                GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
+                center_of_mass = GT_pcd.get_center()
+
+                # create a new GT point cloud only with the points that are in the vertebral arch
+                GT_points = np.asarray(GT_pcd.points)
+                y_coord_center_of_mass = center_of_mass[1]
+                gt_arch = np.asarray([point for point in GT_points if point[1] > y_coord_center_of_mass])
+                #gt_arches.append(GT_arch)
+
+                # create a new completion point cloud only with the points that are above the center of mass
+                completion_arch = np.asarray([point for point in fine_cpu[pcd_idx] if point[1] > y_coord_center_of_mass])
+                #completion_arches.append(completion_arch)
+
+                completion_arch = completion_arch[np.newaxis,:,:]
+                gt_arch = gt_arch[np.newaxis,:,:]
+
+                completion_arch = torch.tensor(completion_arch).float().to(device)
+                gt_arch = torch.tensor(gt_arch).float().to(device)
+
+                # compute here the metrics only for one shape
+                cd_p_arch, cd_t_arch, f1_arch = calc_cd(completion_arch, gt_arch, calc_f1=True)
+                cds_p_arch.append(cd_p_arch)
+                cds_t_arch.append(cd_t_arch)
+                f1s_arch.append(f1_arch)
+
+            cd_p_arch = torch.stack(cds_p_arch)
+            cd_p_arch = torch.reshape(cd_p_arch,(fine_cpu.shape[0],))
+            cd_t_arch = torch.stack(cds_t_arch)
+            cd_t_arch = torch.reshape(cd_t_arch,(fine_cpu.shape[0],))
+            f1_arch = torch.stack(f1s_arch)
+            f1_arch = torch.reshape(f1_arch,(fine_cpu.shape[0],))
+
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
+                emd_arches = calc_emd(fine,gt, eps=0.004, iterations=3000)
             else:
                 emd = 0
+                emd_arches = 0
+
+            # compute the metrics for the whole vertebral shape
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
-            return {'out1': coarse_raw, 'result': fine, 'gt':gt, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
+
+            return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
+                    'f1': f1, 'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
         """
         elif prefix=="test":
             return {'result': fine}

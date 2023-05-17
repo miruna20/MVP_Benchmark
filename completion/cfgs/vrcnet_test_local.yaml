@@ -2,15 +2,40 @@ batch_size: 2
 workers: 0
 nepoch: 100
 model_name: vrcnet
-load_model: /mnt/HDD1/miruna/shape_completion/model/model_new_pipeline_polluted_FPS/best_cd_t_network.pth
+
+#EXP2 complete pipeline model
+load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
+
+# EXP3 deformation ablation model
+#load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109113/log/vrcnet_cd_debug_2023-05-06T10:58:52/best_cd_t_network.pth
+
+# EXP4 US artefacts ablation model
+#load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109249/log/vrcnet_cd_debug_2023-05-09T17:03:49/best_cd_t_network.pth
+
+# EXP5 polluted pcd ablation model
+#load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109211/log/vrcnet_cd_debug_2023-05-08T08:20:32/best_cd_t_network.pth
+
 num_partial_scans_per_mesh: 1
 path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_training_verse_clean.h5
 path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_verse_clean.h5
-#path_to_test_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_test_verse_clean.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_Maria.h5
 path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_FPS_no_noise/dataset_test_verse_subsample.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_no_deform/dataset_verse_test_no_deform.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_complete/dataset_verse_test_complete_pipeline.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_unpolluted/dataset_verse_test_unpolluted.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_noUSartefact/dataset_verse_test_noUSartefact.h5
+
+#name_folder_to_save_results: exp2_complete_pipeline_patient6
+#name_folder_to_save_results: exp3_no_deform_patient6
+#name_folder_to_save_results: exp4_noUSartefact_patient6
+#name_folder_to_save_results: exp5_unpolluted_patient6
+
+name_folder_to_save_results: exp2_complete_pipeline_patient8_vert_arch_metrics
+#name_folder_to_save_results: exp3_no_deform_patient8
+#name_folder_to_save_results: exp4_noUSartefact_patient8
+#name_folder_to_save_results: exp5_unpolluted_patient8
+
 data_to_test: test
 start_epoch: 0
 num_points: 4096
