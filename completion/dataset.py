@@ -12,7 +12,7 @@ from mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, gr
 
 class verse2020_lumbar(data.Dataset):
 
-    def __init__(self, train_path, val_path, test_path, apply_trafo=True, sigma=0.005, prefix="train", cluster=False, num_partial_scans_per_mesh=16):
+    def __init__(self, train_path, val_path, test_path, apply_trafo=True, sigma=0.005, prefix="train", num_partial_scans_per_mesh=16):
         logging.info("Using vertebrae dataset")
         if prefix == "train":
             self.file_path = train_path
@@ -26,10 +26,7 @@ class verse2020_lumbar(data.Dataset):
             raise ValueError("ValueError prefix should be [train/val/test] ")
         self.apply_trafo = apply_trafo
         self.sigma = sigma
-        if (cluster):
-            from polyaxon_client.tracking import Experiment, get_data_paths, get_outputs_path
-            data_paths_polyaxon = get_data_paths()
-            self.file_path = os.path.join(data_paths_polyaxon['data1'], "USShapeCompletion", "MVP", self.file_path)
+
         self.prefix = prefix
 
         input_file = h5py.File(self.file_path, 'r')
@@ -65,7 +62,7 @@ class verse2020_lumbar(data.Dataset):
 
 
 class MVP_CP(data.Dataset):
-    def __init__(self, prefix="train", cluster=False):
+    def __init__(self, prefix="train"):
         logging.info("Using objects dataset")
 
         if prefix == "train":
@@ -84,10 +81,6 @@ class MVP_CP(data.Dataset):
         else:
             raise ValueError("ValueError prefix should be [train/val/test] ")
 
-        if (cluster):
-            from polyaxon_client.tracking import Experiment, get_data_paths, get_outputs_path
-            data_paths_polyaxon = get_data_paths()
-            self.file_path = os.path.join(data_paths_polyaxon['data1'], "USShapeCompletion", "MVP", self.file_path)
         self.prefix = prefix
 
         input_file = h5py.File(self.file_path, 'r')

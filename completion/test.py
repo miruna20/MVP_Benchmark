@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")
 device = 'cuda'
 device_ids = [0]
 
-def test(cluster=False):
+def test():
     logging.info(str(args))
 
     prefix = args.data_to_test
@@ -29,7 +29,6 @@ def test(cluster=False):
                                     apply_trafo=args.apply_trafo,
                                     sigma = args.sigma,
                                     prefix=prefix,
-                                    cluster=cluster,
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
                                                   shuffle=False, num_workers=int(args.workers))
@@ -40,15 +39,9 @@ def test(cluster=False):
     model_module = importlib.import_module('.%s' % args.model_name, 'models')
 
     modelPath = args.load_model
-    if (cluster):
-        net = torch.nn.DataParallel(model_module.Model(args))
 
-        from polyaxon_client.tracking import get_data_paths
-        data_paths = get_data_paths()
 
-        modelPath = os.path.join(data_paths['data1'], "USShapeCompletion", "MVP", args.load_model)
-    else:
-        net = torch.nn.DataParallel(model_module.Model(args), device_ids=device_ids)
+    net = torch.nn.DataParallel(model_module.Model(args), device_ids=device_ids)
     net.to(device)
     net.module.load_state_dict(torch.load(modelPath)['net_state_dict'])
     logging.info("%s's previous weights loaded." % args.model_name)
@@ -152,6 +145,7 @@ def test(cluster=False):
         all_results = np.concatenate(results_list, axis=0)
         if(args.eval_emd):
             all_emd = np.concatenate(emd, axis=0)
+            all_emd_arch = np.concatenate(emd_arch,axis=0)
         all_cd_p = np.concatenate(cd_p, axis=0)
         all_cd_p_arch = np.concatenate(cd_p_arch, axis=0)
         all_cd_t = np.concatenate(cd_t, axis=0)
@@ -165,6 +159,7 @@ def test(cluster=False):
             f.create_dataset('results', data=all_results)
             if(args.eval_emd):
                 f.create_dataset('emd', data=all_emd)
+                f.create_dataset('emd_arch',data=all_emd_arch)
             f.create_dataset('cd_p', data=all_cd_p)
             f.create_dataset('cd_p_arch', data=all_cd_p_arch)
             f.create_dataset('cd_t', data=all_cd_t)
@@ -184,13 +179,7 @@ def test(cluster=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test config file')
     parser.add_argument('-c', '--config', help='path to config file', required=True)
-    parser.add_argument(
-        "--cluster",
-        dest="cluster",
-        default=False,
-        action="store_true",
-        help="If set, training on cluster will be enabled",
-    )
+
     torch.cuda.empty_cache()
     arg = parser.parse_args()
     config_path = arg.config
@@ -199,20 +188,14 @@ if __name__ == "__main__":
     if not args.load_model:
         raise ValueError('Model path must be provided to load model!')
 
-    if (arg.cluster):
-        from polyaxon_client.tracking import get_outputs_path
+    output_directory = "results"
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    log_dir = os.path.join(output_directory,args.name_folder_to_save_results)
 
-        output_directory = get_outputs_path()
-        log_dir = os.path.join(output_directory, os.path.dirname(args.load_model))
-    else:
-        output_directory = "/home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/results"
-        timestr = time.strftime("%Y%m%d-%H%M%S")
-        log_dir = os.path.join(output_directory,args.name_folder_to_save_results)
-
-    # in case on the cluster the log_dir does not exist
+    # in case on the log_dir does not exist
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'test.log')),
                                                       logging.StreamHandler(sys.stdout)])
 
-    test(arg.cluster)
+    test()

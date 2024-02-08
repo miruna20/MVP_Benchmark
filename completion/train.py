@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 device_ids = [0]
 device = 'cuda'
 
-def train(cluster=False):
+def train():
     logging.info(str(args))
     if args.eval_emd:
         metrics = ['cd_p', 'cd_t', 'emd', 'f1']
@@ -42,7 +42,6 @@ def train(cluster=False):
                                test_path=args.path_to_test_dataset,
                                apply_trafo=args.apply_trafo,
                                sigma = args.sigma,
-                               cluster=cluster,
                                prefix = "train",
                                num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
                                )
@@ -51,7 +50,6 @@ def train(cluster=False):
                                     test_path=args.path_to_test_dataset,
                                     apply_trafo=args.apply_trafo,
                                     sigma=args.sigma,
-                                    cluster=cluster,
                                     prefix="val",
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
                                    )
@@ -71,10 +69,8 @@ def train(cluster=False):
     torch.manual_seed(seed)
 
     model_module = importlib.import_module('.%s' % args.model_name, 'models')
-    if(cluster):
-        net = torch.nn.DataParallel(model_module.Model(args))
-    else:
-        net = torch.nn.DataParallel(model_module.Model(args),device_ids=device_ids)
+
+    net = torch.nn.DataParallel(model_module.Model(args))
     net.to(device)
     if hasattr(model_module, 'weights_init'):
         net.module.apply(model_module.weights_init)
@@ -82,10 +78,7 @@ def train(cluster=False):
     cascade_gan = (args.model_name == 'cascade')
     net_d = None
     if cascade_gan:
-        if(cluster):
-            net_d = torch.nn.DataParallel(model_module.Discriminator(args))
-        else:
-            net_d = torch.nn.DataParallel(model_module.Discriminator(args), device_ids=device_ids)
+        net_d = torch.nn.DataParallel(model_module.Discriminator(args))
         net_d.to(device)
         net_d.module.apply(model_module.weights_init)
 
@@ -226,13 +219,7 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train config file')
     parser.add_argument('-c', '--config', help='path to config file', required=True)
-    parser.add_argument(
-        "--cluster",
-        dest="cluster",
-        default=False,
-        action="store_true",
-        help="If set, training on cluster will be enabled",
-    )
+
     arg = parser.parse_args()
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
@@ -249,20 +236,14 @@ if __name__ == "__main__":
     else:
         exp_name = args.model_name + '_' + args.loss + '_' + args.flag + '_' + time
 
-        if(arg.cluster):
-            from polyaxon_client.tracking import Experiment, get_data_paths, get_outputs_path
 
-            output_directory = get_outputs_path()
-            log_dir = os.path.join(output_directory,args.work_dir, exp_name)
+    log_dir = os.path.join(args.work_dir, exp_name)
 
-        else:
-            log_dir = os.path.join(args.work_dir, exp_name)
-
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'train.log')),
                                                       logging.StreamHandler(sys.stdout)])
-    train(arg.cluster)
+    train()
 
 
 

@@ -3,38 +3,76 @@ workers: 0
 nepoch: 100
 model_name: vrcnet
 
+#EXP1 feasibility experiment
+#load_model: /mnt/HDD1/miruna/shape_completion/model/model_lumbar_verse20_experiment104486/best_cd_t_network_exp104486.pth
+
 #EXP2 complete pipeline model
-load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
+#load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
+load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109114/log/vrcnet_cd_debug_2023-05-06T17-55-02/best_cd_t_network.pth
 
 # EXP3 deformation ablation model
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109113/log/vrcnet_cd_debug_2023-05-06T10:58:52/best_cd_t_network.pth
+#load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109113/log/vrcnet_cd_debug_2023-05-06T10:58:52/best_cd_t_network.pth
 
 # EXP4 US artefacts ablation model
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109249/log/vrcnet_cd_debug_2023-05-09T17:03:49/best_cd_t_network.pth
+#load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109249/log/vrcnet_cd_debug_2023-05-09T17:03:49/best_cd_t_network.pth
 
 # EXP5 polluted pcd ablation model
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109211/log/vrcnet_cd_debug_2023-05-08T08:20:32/best_cd_t_network.pth
+#load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109211/log/vrcnet_cd_debug_2023-05-08T08:20:32/best_cd_t_network.pth
+
+#EXP6 patient specific network specialization
+#load_model: /mnt/HDD1/miruna/shape_completion/model/patient_specific_network_specialization/patient8_specializingmodel/best_cd_t_network.pth
+#load_model: /mnt/HDD1/miruna/shape_completion/model/patient_specific_network_specialization/patient6_specializingmodel/best_cd_t_network.pth
+#load_model: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/log/phantom_specializingmodel/best_cd_t_network.pth
 
 num_partial_scans_per_mesh: 1
 path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_training_verse_clean.h5
 path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_verse_clean.h5
+
+# TEST DATASETS PATIENTS
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_Maria.h5
-path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_no_deform/dataset_verse_test_no_deform.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_complete/dataset_verse_test_complete_pipeline.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_unpolluted/dataset_verse_test_unpolluted.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_noUSartefact/dataset_verse_test_noUSartefact.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_IFL.h5
+#path_to_test_dataset: /mnt/projects/deepSpine/CTUSFromQueens/phantom_IFL/US_data/segm_with_helpof_CT/phantom_IFL.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset_axial.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6_automaticseparation.h5
+path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_experiment_3.h5
 
-#name_folder_to_save_results: exp2_complete_pipeline_patient6
-#name_folder_to_save_results: exp3_no_deform_patient6
-#name_folder_to_save_results: exp4_noUSartefact_patient6
+
+# TEST DATASETS SYNTHETIC
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_from_CT/verse20_lumbarVert_test.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_complete/dataset_verse_test_complete_pipeline.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_no_deform/dataset_verse_test_no_deform.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_noUSartefact/dataset_verse_test_noUSartefact.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_unpolluted/dataset_verse_test_unpolluted.h5
+
+#name_folder_to_save_results: synthetic/exp1_data_from_CT
+#name_folder_to_save_results: synthetic/exp2_complete_pipeline_synthetic_with_emd
+#name_folder_to_save_results: synthetic/exp3_no_deform_synthetic
+#name_folder_to_save_results: synthetic/exp4_noUSartefact_synthetic
+#name_folder_to_save_results: synthetic/exp5_unpolluted_synthetic
+
+#name_folder_to_save_results: exp2_complete_pipeline_patient6_with_emd
+#name_folder_to_save_results: exp3_no_deform_patient6_with_emd
+#name_folder_to_save_results: exp4_noUSartefact_patient6_with_emd
 #name_folder_to_save_results: exp5_unpolluted_patient6
 
-name_folder_to_save_results: exp2_complete_pipeline_patient8_vert_arch_metrics
-#name_folder_to_save_results: exp3_no_deform_patient8
-#name_folder_to_save_results: exp4_noUSartefact_patient8
-#name_folder_to_save_results: exp5_unpolluted_patient8
+#name_folder_to_save_results: exp2_complete_pipeline_patient8_with_emd
+#name_folder_to_save_results: exp3_no_deform_patient8_with_emd
+#name_folder_to_save_results: exp4_noUSartefact_patient8_with_emd
+#name_folder_to_save_results: exp5_unpolluted_patient8_with_emd
+
+#name_folder_to_save_results: exp5_automaticseparation_patient6
+
+#name_folder_to_save_results: exp2_complete_pipeline_phantom_IFL
+#name_folder_to_save_results: exp2_complete_pipeline_phantom_IFL_withhelpofCT
+#name_folder_to_save_results: exp2_newTamasData_axial
+
+name_folder_to_save_results: phantomIFL_experiment_3
 
 data_to_test: test
 start_epoch: 0
@@ -77,4 +115,4 @@ sigma: 0.005
 # test
 align: True
 save_vis: False
-eval_emd: False
+eval_emd: True
