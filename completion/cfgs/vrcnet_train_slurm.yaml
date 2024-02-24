@@ -2,14 +2,15 @@ batch_size: 2
 workers: 0
 nepoch: 100
 model_name: vrcnet
-load_model: completion/model/model_lumbar_verse20/best_cd_t_network_exp105531.pth
-num_partial_scans_per_mesh: 1
-path_to_train_dataset: completion/data/new_pipeline/noisy/dataset_training_verse.h5
-path_to_val_dataset: completion/data/new_pipeline/noisy/dataset_validation_verse.h5
-path_to_test_dataset: completion/data/new_pipeline/noisy/dataset_test_verse.h5
-data_to_test: test
+load_model: False
 start_epoch: 0
 num_points: 4096
+num_partial_scans_per_mesh: 1
+
+path_to_train_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_training.h5
+path_to_val_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_validation.h5
+path_to_test_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_test.h5
+
 work_dir: log/
 flag: debug
 loss: cd
@@ -42,9 +43,8 @@ num_coarse_raw: 2048
 num_fps: 4096
 num_coarse: 4096
 
-apply_trafo: True
+apply_trafo: False
 sigma: 0.005
-
 
 # test
 align: False

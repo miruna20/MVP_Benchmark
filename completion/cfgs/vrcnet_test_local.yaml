@@ -8,7 +8,7 @@ model_name: vrcnet
 
 #EXP2 complete pipeline model
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
-load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109114/log/vrcnet_cd_debug_2023-05-06T17-55-02/best_cd_t_network.pth
+#load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109114/log/vrcnet_cd_debug_2023-05-06T17-55-02/best_cd_t_network.pth
 
 # EXP3 deformation ablation model
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109113/log/vrcnet_cd_debug_2023-05-06T10:58:52/best_cd_t_network.pth
@@ -27,9 +27,14 @@ load_model: /mnt/HDD1/miruna/shape_completion/VRCNet_trainedModels/109114/log/vr
 #load_model: /mnt/HDD1/miruna/shape_completion/model/patient_specific_network_specialization/patient6_specializingmodel/best_cd_t_network.pth
 #load_model: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/log/phantom_specializingmodel/best_cd_t_network.pth
 
+#Complete pipeline
+load_model: log/vrcnet_cd_debug_2024-02-08T12:09:38/best_cd_t_network.pth
+
 num_partial_scans_per_mesh: 1
-path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_training_verse_clean.h5
-path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_verse_clean.h5
+path_to_train_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_training.h5
+path_to_val_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_validation.h5
+path_to_test_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_test.h5
+
 
 # TEST DATASETS PATIENTS
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
@@ -40,7 +45,7 @@ path_to_val_dataset:  /mnt/HDD1/miruna/shape_completion/data/dataset_validation_
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset_axial.h5
 #path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6_automaticseparation.h5
-path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_experiment_3.h5
+#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_experiment_3.h5
 
 
 # TEST DATASETS SYNTHETIC
@@ -72,7 +77,7 @@ path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_experiment_
 #name_folder_to_save_results: exp2_complete_pipeline_phantom_IFL_withhelpofCT
 #name_folder_to_save_results: exp2_newTamasData_axial
 
-name_folder_to_save_results: phantomIFL_experiment_3
+name_folder_to_save_results: complete_pipeline_synthetic_data
 
 data_to_test: test
 start_epoch: 0
@@ -113,6 +118,6 @@ apply_trafo: False
 sigma: 0.005
 
 # test
-align: True
+align: False
 save_vis: False
 eval_emd: True
