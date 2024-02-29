@@ -17,7 +17,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 device = 'cuda'
-device_ids = [0]
 
 def test():
     logging.info(str(args))
@@ -41,7 +40,7 @@ def test():
     modelPath = args.load_model
 
 
-    net = torch.nn.DataParallel(model_module.Model(args), device_ids=device_ids)
+    net = torch.nn.DataParallel(model_module.Model(args))
     net.to(device)
     net.module.load_state_dict(torch.load(modelPath)['net_state_dict'])
     logging.info("%s's previous weights loaded." % args.model_name)

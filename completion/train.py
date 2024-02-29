@@ -18,8 +18,6 @@ from dataset import MVP_CP
 from dataset import verse2020_lumbar
 import os
 
-# import wandb
-#TODO after testing the training pipeline push the changes code to github
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -223,9 +221,6 @@ if __name__ == "__main__":
     arg = parser.parse_args()
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
-
-    # wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
-    # wandb.init(project="VRCNet-Training")
 
     torch.cuda.empty_cache()
 

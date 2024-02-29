@@ -2,24 +2,16 @@ batch_size: 2
 workers: 0
 nepoch: 100
 model_name: vrcnet
-#load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
-#load_model: False
-load_model: log/vrcnet_cd_debug_2024-02-05T08:26:25/best_cd_t_network.pth
-start_epoch: 33
+
+load_model: False
+start_epoch: 0
 num_points: 4096
 num_partial_scans_per_mesh: 1
-#path_to_train_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_training_verse.h5
-#path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/data_patient_specific_training/dataset_specialization_training_patient8.h5
-#path_to_train_dataset: /mnt/HDD1/miruna/shape_completion/data/data_patient_specific_training/phantomIFL_network_specialization_training.h5
-#path_to_train_dataset: /mnt/HDD1/miruna/data_preprocessing/verse/vertebrae/dataset_training.h5
-path_to_train_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_training.h5
-#path_to_val_dataset: /mnt/HDD1/miruna/shape_completion/data/data_patient_specific_training/phantomIFL_network_specialization_validation.h5
-#path_to_val_dataset: /mnt/HDD1/miruna/shape_completion/data/data_patient_specific_training/dataset_specialization_validation_patient8.h5
-#path_to_val_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_validation_verse.h5
-#path_to_val_dataset: /mnt/HDD1/miruna/data_preprocessing/verse/vertebrae/dataset_validation.h5
-path_to_val_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_validation.h5
 
-path_to_test_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_test_verse.h5
+path_to_train_dataset: dataset/dataset_verse_training.h5
+path_to_val_dataset: dataset/dataset_verse_validation.h5
+path_to_test_dataset: dataset/dataset_verse_test.h5
+
 work_dir: log/
 flag: debug
 loss: cd
