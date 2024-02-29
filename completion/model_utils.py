@@ -56,7 +56,8 @@ class EF_expansion(nn.Module):
 
 def attention(query, key, value, mask=None):
     d_k = query.size(-1)
-    scores = torch.matmul(query, key.transpose(-2, -1).contiguous()) / math.sqrt(d_k)  # B x 4 x points x points
+    attn_logits = torch.matmul(query, key.transpose(-2, -1))
+    scores = attn_logits / math.sqrt(d_k)  # B x 4 x points x points
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim=-1)

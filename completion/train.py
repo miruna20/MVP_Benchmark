@@ -1,5 +1,6 @@
 import subprocess
 
+import numpy as np
 import torch.optim as optim
 import torch
 # from utils.train_utils import *
@@ -17,6 +18,9 @@ import argparse
 from dataset import MVP_CP
 from dataset import verse2020_lumbar
 import os
+import nibabel as nib
+from torch.nn.parallel import DistributedDataParallel
+
 
 # import wandb
 #TODO after testing the training pipeline push the changes code to github
@@ -71,6 +75,8 @@ def train():
     model_module = importlib.import_module('.%s' % args.model_name, 'models')
 
     net = torch.nn.DataParallel(model_module.Model(args))
+    #net = torch.nn.DistributedDataParallel(model_module.Model(args),num_procs=1)
+    #net = model_module.Model(args)
     net.to(device)
     if hasattr(model_module, 'weights_init'):
         net.module.apply(model_module.weights_init)
@@ -143,6 +149,8 @@ def train():
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
+        labelmap = nib.load("/mnt/HDD1/miruna/data_preprocessing/verse/vertebrae/sub-verse821_verLev20/sub-verse821_CT-iso_msk_verLev202D_labelmap.nii.gz").get_fdata()[:,:,0][np.newaxis,np.newaxis,:,:]
+
         for i, data in enumerate(dataloader, 0):
             optimizer.zero_grad()
             if cascade_gan:
@@ -151,11 +159,15 @@ def train():
             _, inputs, gt = data
             # mean_feature = None
 
+            #TODO get labelmap from inputs
             inputs = inputs.float().to(device)
             gt = gt.float().to(device)
             inputs = inputs.transpose(2, 1).contiguous()
+            labelmap = torch.from_numpy(labelmap)
+            labelmap = labelmap.float().to(device)
+
             # out2, loss2, net_loss = net(inputs, gt, mean_feature=mean_feature, alpha=alpha)
-            out2, loss2, net_loss = net(inputs, gt, alpha=alpha)
+            out2, loss2, net_loss = net(inputs, labelmap, gt, alpha=alpha)
 
             if cascade_gan:
                 d_fake = generator_step(net_d, out2, net_loss, optimizer)

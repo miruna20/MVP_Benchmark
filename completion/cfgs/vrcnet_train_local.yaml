@@ -1,11 +1,11 @@
-batch_size: 2
+batch_size: 1
 workers: 0
 nepoch: 100
-model_name: vrcnet
+model_name: vrcnet_multimodal
 #load_model: /mnt/polyaxon/outputs1/miruna_gafencu/VRCNet/experiments/109114/log/vrcnet_cd_debug_2023-05-06T17:55:02/best_cd_t_network.pth
-#load_model: False
-load_model: log/vrcnet_cd_debug_2024-02-05T08:26:25/best_cd_t_network.pth
-start_epoch: 33
+load_model: False
+#load_model: log/vrcnet_cd_debug_2024-02-05T08:26:25/best_cd_t_network.pth
+start_epoch: 0
 num_points: 4096
 num_partial_scans_per_mesh: 1
 #path_to_train_dataset: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/completion/data/dataset_training_verse.h5
