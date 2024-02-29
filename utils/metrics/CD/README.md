@@ -15,8 +15,8 @@ NB : In this depo, dist1 and dist2 are squared pointcloud euclidean distances, s
 ```python
 import torch, chamfer3D.dist_chamfer_3D, fscore
 chamLoss = chamfer3D.dist_chamfer_3D.chamfer_3DDist()
-points1 = torch.rand(32, 1000, 3).cuda()
-points2 = torch.rand(32, 2000, 3, requires_grad=True).cuda()
+points1 = torch.rand(32, 1000, 3).to('cuda')
+points2 = torch.rand(32, 2000, 3, requires_grad=True).to('cuda')
 dist1, dist2, idx1, idx2 = chamLoss(points1, points2)
 f_score, precision, recall = fscore.fscore(dist1, dist2)
 ```

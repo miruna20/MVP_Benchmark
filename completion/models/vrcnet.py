@@ -7,7 +7,9 @@ import torch.nn.functional as F
 # from utils.model_utils import *
 from model_utils import *
 from models.pcn import PCN_encoder
+import open3d as o3d
 
+device = 'cuda'
 # proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # sys.path.append(os.path.join(proj_dir, "utils/Pointnet2.PyTorch/pointnet2"))
 # import pointnet2_utils as pn2
@@ -86,7 +88,7 @@ class Folding(nn.Module):
             batch_size,
             -1, num_features).transpose(1, 2).contiguous()
         global_feat = global_feat.unsqueeze(2).repeat(1, 1, num_points * self.step_ratio).repeat(self.num_models, 1, 1)
-        grid_feat = self.grid.unsqueeze(0).repeat(batch_size, num_points, 1).transpose(1, 2).contiguous().cuda()
+        grid_feat = self.grid.unsqueeze(0).repeat(batch_size, num_points, 1).transpose(1, 2).contiguous().to(device)
         features = torch.cat([global_feat, point_feat, grid_feat], axis=1)
         features = F.relu(self.conv(features))
         return features
@@ -319,7 +321,6 @@ class MSAP_SKN_decoder(nn.Module):
         else:
             self.input_size = 3
 
-
         self.encoder = SA_SKN_Res_encoder(input_size=self.input_size, k=knn_list, pk=pk,
                                           output_size=self.dense_feature_size, layers=layers)
 
@@ -361,10 +362,10 @@ class MSAP_SKN_decoder(nn.Module):
         org_points_input = point_input
 
         if self.points_label:
-            id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).cuda().contiguous()
-            coarse_input = torch.cat( (coarse_raw, id0), 1)
-            id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).cuda().contiguous()
-            org_points_input = torch.cat( (org_points_input, id1), 1)
+            id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
+            coarse_input = torch.cat((coarse_raw, id0), 1)
+            id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
+            org_points_input = torch.cat((org_points_input, id1), 1)
         else:
             coarse_input = coarse_raw
 
@@ -416,10 +417,12 @@ class Model(nn.Module):
         layers = [int(i) for i in args.layers.split(',')]
         knn_list = [int(i) for i in args.knn_list.split(',')]
 
+        self.num_points = args.num_points
         self.size_z = size_z
         self.distribution_loss = args.distribution_loss
         self.train_loss = args.loss
         self.eval_emd = args.eval_emd
+        self.align = args.align
         self.encoder = PCN_encoder(output_size=global_feature_size)
         self.posterior_infer1 = Linear_ResBlock(input_size=global_feature_size, output_size=global_feature_size)
         self.posterior_infer2 = Linear_ResBlock(input_size=global_feature_size, output_size=size_z * 2)
@@ -436,7 +439,7 @@ class Model(nn.Module):
 
         tiled_x = x.unsqueeze(1).repeat(1, y_size, 1)
         tiled_y = y.unsqueeze(0).repeat(x_size, 1, 1)
-        return torch.exp(-torch.mean((tiled_x - tiled_y)**2, dim=2) / float(dim))
+        return torch.exp(-torch.mean((tiled_x - tiled_y) ** 2, dim=2) / float(dim))
 
     def mmd_loss(self, x, y):
         x_kernel = self.compute_kernel(x, x)
@@ -445,10 +448,10 @@ class Model(nn.Module):
         return torch.mean(x_kernel) + torch.mean(y_kernel) - 2 * torch.mean(xy_kernel)
 
     def forward(self, x, gt=None, prefix="train", mean_feature=None, alpha=None):
-        num_input = x.size()[2]
 
-        if prefix=="train":
-            y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, num_input))
+        if prefix == "train":
+            y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
+
             gt = torch.cat([gt, gt], dim=0)
             points = torch.cat([x, y], dim=0)
             x = torch.cat([x, x], dim=0)
@@ -456,7 +459,7 @@ class Model(nn.Module):
             points = x
         feat = self.encoder(points)
 
-        if prefix=="train":
+        if prefix == "train":
             feat_x, feat_y = feat.chunk(2)
             o_x = self.posterior_infer2(self.posterior_infer1(feat_x))
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
@@ -491,7 +494,7 @@ class Model(nn.Module):
         coarse = coarse.transpose(1, 2).contiguous()
         fine = fine.transpose(1, 2).contiguous()
 
-        if prefix=="train":
+        if prefix == "train":
             if self.distribution_loss == 'MMD':
                 z_m = m_distribution.rsample()
                 z_q = q_distribution.rsample()
@@ -516,12 +519,94 @@ class Model(nn.Module):
             total_train_loss = loss1.mean() * 10 + loss2.mean() * 0.5 + loss3.mean() + loss4.mean() * alpha
             total_train_loss += (dl_rec.mean() + dl_g.mean()) * 20
             return fine, loss4, total_train_loss
-        elif prefix=="val":
+        elif prefix == "val" or prefix == "test":
+            fine_cpu = fine.cpu().numpy()
+            gt_cpu = gt.cpu().numpy()
+            if self.align:
+                gts_aligned = []
+                inputs_aligned = []
+                # iterate over all point clouds in batch size
+                input_cpu = x.transpose(1, 2).contiguous().cpu().numpy()
+                for pcd_idx in range(fine_cpu.shape[0]):
+                    # create point cloud from completion
+                    completion_pcd = o3d.geometry.PointCloud()
+                    completion_pcd.points = o3d.utility.Vector3dVector(fine_cpu[pcd_idx])
+
+                    # create point cloud from GT
+                    GT_pcd = o3d.geometry.PointCloud()
+                    GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
+
+                    # perform the registration
+                    reg_p2p = o3d.registration.registration_icp(GT_pcd, completion_pcd, 0.02)
+
+                    # apply trafo on the GT pcd
+                    GT_pcd.transform(reg_p2p.transformation)
+                    gts_aligned.append(np.asarray(GT_pcd.points))
+
+                    # create pcd from input
+                    input_pcd = o3d.geometry.PointCloud()
+                    input_pcd.points = o3d.utility.Vector3dVector(input_cpu[pcd_idx])
+
+                    # apply trafo on the input pcd
+                    input_pcd.transform(reg_p2p.transformation)
+                    inputs_aligned.append(np.asarray(input_pcd.points))
+
+                # stack them back
+                gt = np.stack(gts_aligned)
+                gt = torch.tensor(gt).float().to(device)
+                #x = np.stack(inputs_aligned)
+                #x = torch.tensor(x).float().to(device)
+
+            # these will be list of tensors and in the end we stack them to one tensor
+            cds_p_arch = []
+            cds_t_arch = []
+            f1s_arch = []
+
+
+            for pcd_idx in range(fine_cpu.shape[0]):
+                # create point cloud from GT
+                GT_pcd = o3d.geometry.PointCloud()
+                GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
+                center_of_mass = GT_pcd.get_center()
+
+                # create a new GT point cloud only with the points that are in the vertebral arch
+                GT_points = np.asarray(GT_pcd.points)
+                y_coord_center_of_mass = center_of_mass[1]
+                gt_arch = np.asarray([point for point in GT_points if point[1] > y_coord_center_of_mass])
+                #gt_arches.append(GT_arch)
+
+                # create a new completion point cloud only with the points that are above the center of mass
+                completion_arch = np.asarray([point for point in fine_cpu[pcd_idx] if point[1] > y_coord_center_of_mass])
+                #completion_arches.append(completion_arch)
+
+                completion_arch = completion_arch[np.newaxis,:,:]
+                gt_arch = gt_arch[np.newaxis,:,:]
+
+                completion_arch = torch.tensor(completion_arch).float().to(device)
+                gt_arch = torch.tensor(gt_arch).float().to(device)
+
+                # compute here the metrics only for one shape
+                cd_p_arch, cd_t_arch, f1_arch = calc_cd(completion_arch, gt_arch, calc_f1=True)
+                cds_p_arch.append(cd_p_arch)
+                cds_t_arch.append(cd_t_arch)
+                f1s_arch.append(f1_arch)
+
+            cd_p_arch = torch.stack(cds_p_arch)
+            cd_p_arch = torch.reshape(cd_p_arch,(fine_cpu.shape[0],))
+            cd_t_arch = torch.stack(cds_t_arch)
+            cd_t_arch = torch.reshape(cd_t_arch,(fine_cpu.shape[0],))
+            f1_arch = torch.stack(f1s_arch)
+            f1_arch = torch.reshape(f1_arch,(fine_cpu.shape[0],))
+
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
+                emd_arch = calc_emd(fine,gt, eps=0.004, iterations=3000)
             else:
                 emd = 0
+                emd_arch = 0
+
+            # compute the metrics for the whole vertebral shape
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
-            return {'out1': coarse_raw, 'out2': fine, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t, 'f1': f1}
-        elif prefix=="test":
-            return {'result': fine}
+
+            return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
+                    'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}

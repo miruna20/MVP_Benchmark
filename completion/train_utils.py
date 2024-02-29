@@ -39,7 +39,7 @@ def generator_step(net_d, out2, net_loss, optimizer):
     d_fake = net_d(out2[:, 0:2048, :])
     errG_loss_batch = torch.mean((d_fake - 1) ** 2)
     total_gen_loss_batch = errG_loss_batch + net_loss * 200
-    total_gen_loss_batch.backward(torch.ones(torch.cuda.device_count()).cuda(), retain_graph=True, )
+    total_gen_loss_batch.backward(torch.ones(1).to('cuda'), retain_graph=True, )
     optimizer.step()
     return d_fake
 
@@ -51,7 +51,7 @@ def discriminator_step(net_d, gt, d_fake, optimizer_d):
     d_loss_real = torch.mean((d_real - 1) ** 2)
     errD_loss_batch = 0.5 * (d_loss_real + d_loss_fake)
     total_dis_loss_batch = errD_loss_batch
-    total_dis_loss_batch.backward(torch.ones(torch.cuda.device_count()).cuda())
+    total_dis_loss_batch.backward(torch.ones(1).to('cuda'))
     optimizer_d.step()
 
 

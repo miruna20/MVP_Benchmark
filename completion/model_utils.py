@@ -16,12 +16,11 @@ import torch.nn.functional as F
 # from chamfer3D import dist_chamfer_3D
 # from fscore import fscore
 
-sys.path.append("../utils")
+sys.path.append("utils")
 from metrics import cd, fscore, emd
 from mm3d_pn2 import furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
 
 # from ..utils import cd, fscore, emd, furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
-
 
 class EF_expansion(nn.Module):
     def __init__(self, input_size, output_size=64, step_ratio=2, k=4):
@@ -191,7 +190,7 @@ def get_repulsion_loss(pred, nsample=20, radius=0.07):
     dist_square = torch.sum(grouped_pred ** 2, dim=1)
     dist_square, idx = torch.topk(-dist_square, 5)
     dist_square = -dist_square[:, :, 1:]  # remove the first one
-    dist_square = torch.max(torch.FloatTensor([1e-12]).expand_as(dist_square).cuda(), dist_square)
+    dist_square = torch.max(torch.FloatTensor([1e-12]).expand_as(dist_square).to('cuda'), dist_square)
     dist = torch.sqrt(dist_square)
     weight = torch.exp(-dist_square / h ** 2)
     uniform_loss = torch.mean(radius - dist * weight)
@@ -285,7 +284,7 @@ def symmetric_sample(points, num=512):
 
 def three_nn_upsampling(target_points, source_points):
     dist, idx = three_nn(target_points, source_points)
-    dist = torch.max(dist, torch.ones(1).cuda() * 1e-10)
+    dist = torch.max(dist, torch.ones(1).to('cuda') * 1e-10)
     norm = torch.sum((1.0 / dist), 2, keepdim=True)
     norm = norm.repeat(1, 1, 3)
     weight = (1.0 / dist) / norm
