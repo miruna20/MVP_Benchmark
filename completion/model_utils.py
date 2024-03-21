@@ -63,6 +63,32 @@ def attention(query, key, value, mask=None):
     p_attn = F.softmax(scores, dim=-1)
     return torch.matmul(p_attn, value), p_attn
 
+def attention_features(query, key, value, mask=None):
+
+    # query = feature vector from labelmap
+    # key = value = feature vector from the pcd
+
+    # add another dimension to our vectors
+    # usually one input has size (batch_size, seq_size, dim_k), in our case with only one global representation
+    # vector, the sequence size is 1
+    #query = query.transpose(-2, -1)
+    #key = key.transpose(-2, -1)
+    #value = value.transpose(-2, -1)
+
+    query = query[:, :,None ]
+    key = key[:, :,None ]
+    value = value[:, :,None ]
+
+    d_k = query.size(-1)
+    attn_logits = torch.matmul(query, key.transpose(-2, -1)) ## (1024 x 1) @ (1 x 1024) = (1024 x 1024) with 1024 = num_features
+    scores = attn_logits / math.sqrt(d_k) # 1024 x 1024
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
+    p_attn = F.softmax(scores, dim=-1)
+    values = torch.matmul(p_attn, value) #  (1024 x 1024) @ (1024 x 1) = (1024) --> attended feature vector
+    values = values.squeeze(2)
+    return values, p_attn
+
 
 def calc_cd(output, gt, calc_f1=False):
     # cham_loss = dist_chamfer_3D.chamfer_3DDist()

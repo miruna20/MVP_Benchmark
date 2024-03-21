@@ -518,15 +518,16 @@ class Model(nn.Module):
 
 
             ############ rough completion path ############
+            # For now only add attention to the completion path
             #TODO which should be query and which should be value and key?
 
             # like this it makes more sense because to obtain the attended features we apply the attention scores to the value
             # which here is the feat_x_pcd and the input partial pcd
-            attended_partial_pcd_features, attention_scores = attention(feat_x_labelmap,feat_x_pcd, feat_x_pcd)
+            attended_partial_pcd_features, attention_scores = attention_features(feat_x_labelmap,feat_x_pcd, feat_x_pcd)
 
 
             # like this the attended features will have the same length as the ones from feat_x_pcd
-            #attended_partial_pcd_features, attention_scores = attention(feat_x_pcd,feat_x_labelmap, feat_x_labelmap)
+            #attended_partial_pcd_features, attention_scores = attention_features(feat_x_pcd,feat_x_labelmap, feat_x_labelmap)
 
             #TODO should we apply dropout here on the attended pcd features?
 
@@ -551,7 +552,9 @@ class Model(nn.Module):
             ############ rough completion path ############
 
             ############ reconstruction path ############
-            attended_complete_pcd_features, attention_scores_reconstr = attention(feat_x_labelmap,feat_y,feat_y)
+            """
+             
+            attended_complete_pcd_features, attention_scores_reconstr = attention_features(feat_x_labelmap,feat_y,feat_y)
             # TODO should we apply dropout here on the attended pcd features?
 
             # add & norm
@@ -563,6 +566,7 @@ class Model(nn.Module):
             # TODO should we apply dropout here on the linear_out?
             feat_y = feat_y + linear_out
             feat_y = self.norm2(feat_y)
+            """
 
             o_y = self.prior_infer(feat_y)
             p_mu, p_std = torch.split(o_y, self.size_z, dim=1)
@@ -573,7 +577,6 @@ class Model(nn.Module):
             m_distribution = torch.distributions.Normal(torch.zeros_like(p_mu), torch.ones_like(p_std))
             z_p = p_distribution.rsample()
             ############ reconstruction path ############
-
 
             z = torch.cat([z_q, z_p], dim=0)
 
