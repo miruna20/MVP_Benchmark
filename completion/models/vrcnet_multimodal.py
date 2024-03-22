@@ -8,6 +8,8 @@ import torch.nn.functional as F
 from model_utils import *
 from models.pcn import PCN_encoder
 import open3d as o3d
+import os
+from train_utils import *
 
 
 device = 'cuda'
@@ -411,50 +413,15 @@ class MSAP_SKN_decoder(nn.Module):
 
         return coarse_raw, coarse_high, coarse, fine
 
-class LabelMap_encoder(nn.Module):
-    def __init__(self,global_feature_size=1024, input_channels=64):
-        super(LabelMap_encoder, self).__init__()
-        self.input_channels = input_channels
-        # 1 --> 64
-        self.conv1 = nn.Conv2d(1, input_channels, kernel_size=3, stride=1, padding=1)
-        #TODO use average pooling to fix the variable size input problem or resample or input data to have the same shape
-
-        # 512 --> 256
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # 64 --> 128
-        self.conv2 = nn.Conv2d(input_channels, input_channels*2, kernel_size=3, stride=1, padding=1)
-        # 256 --> 128
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        #128 --> 256
-        self.conv3 = nn.Conv2d(input_channels*2, input_channels * 4, kernel_size=3, stride=1, padding=1)
-        # 128 --> 64
-        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        #256 --> 512
-        self.conv4 = nn.Conv2d(input_channels*4, input_channels * 8, kernel_size=3, stride=1, padding=1)
-        # 64 --> 32
-        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        self.fc1 = nn.Linear(input_channels * 8 *32*32 , global_feature_size*2)  # Adjust the input size based on your label map dimensions
-        self.dropout = nn.Dropout(0.5)  # Optional dropout layer for regularization
-        self.fc2 = nn.Linear(global_feature_size*2, global_feature_size)
-        self.fc3 = nn.Linear(global_feature_size, global_feature_size)  # Output layer
+class MLP_feature_selection(nn.Module):
+    def __init__(self,global_feature_size=2048):
+        super(MLP_feature_selection, self).__init__()
+        self.fc1 = nn.Linear(global_feature_size , global_feature_size)  # Adjust the input size based on your label map dimensions
+        self.fc2 = nn.Linear(global_feature_size, global_feature_size//2)
 
     def forward(self, x):
-        #TODO check if the sizes match here correctly
-        x = F.relu(self.conv1(x))
-        x = self.pool1(x)
-        x = F.relu(self.conv2(x))
-        x = self.pool2(x)
-        x = F.relu(self.conv3(x))
-        x = self.pool3(x)
-        x = F.relu(self.conv4(x))
-        x = self.pool4(x)
-        x = x.view(-1, self.input_channels * 8 * 32 * 32 )  # Flatten before fully connected layers
         x = F.relu(self.fc1(x))
-        x = self.dropout(x)
         x = F.relu(self.fc2(x))
-        x = F.sigmoid(self.fc3(x))  # Using sigmoid activation for the output layer
         return x
 
 class Model(nn.Module):
@@ -471,7 +438,7 @@ class Model(nn.Module):
         self.eval_emd = args.eval_emd
         self.align = args.align
         self.encoder_pcd = PCN_encoder(output_size=global_feature_size)
-        self.encoder_labelmap = LabelMap_encoder(global_feature_size,input_channels=64)
+        self.encoder_labelmap = PCN_encoder(output_size=global_feature_size)
 
         self.posterior_infer1 = Linear_ResBlock(input_size=global_feature_size, output_size=global_feature_size)
         self.posterior_infer2 = Linear_ResBlock(input_size=global_feature_size, output_size=size_z * 2)
@@ -480,7 +447,7 @@ class Model(nn.Module):
         self.decoder = MSAP_SKN_decoder(num_fps=args.num_fps, num_fine=args.num_points, num_coarse=args.num_coarse,
                                         num_coarse_raw=args.num_coarse_raw, layers=layers, knn_list=knn_list,
                                         pk=args.pk, local_folding=args.local_folding, points_label=args.points_label)
-
+        self.feature_selector = MLP_feature_selection(global_feature_size*2)
     def compute_kernel(self, x, y):
         x_size = x.size()[0]
         y_size = y.size()[0]
@@ -508,41 +475,22 @@ class Model(nn.Module):
             points = x_pcd
 
         feat_pcd = self.encoder_pcd(points)
-        # TODO: do we need any other preprocessing of the labelmap before passing it to the encoder?
         feat_x_labelmap = self.encoder_labelmap(x_labelmap)
 
         if prefix == "train":
             # for training we have both a reconstruction path and a completion path
             feat_x_pcd, feat_y = feat_pcd.chunk(2)
-            feat_pcd = torch.cat([feat_x_pcd, feat_x_pcd], dim=0)
-
 
             ############ rough completion path ############
-            # For now only add attention to the completion path
-            #TODO which should be query and which should be value and key?
 
-            # like this it makes more sense because to obtain the attended features we apply the attention scores to the value
-            # which here is the feat_x_pcd and the input partial pcd
-            attended_partial_pcd_features, attention_scores = attention_features(feat_x_labelmap,feat_x_pcd, feat_x_pcd)
+            # concatenate the feature vectors from the partial pcd and from the labelmaps
+            feat_concat = torch.cat([feat_x_pcd,feat_x_labelmap],dim=1)
 
-
-            # like this the attended features will have the same length as the ones from feat_x_pcd
-            #attended_partial_pcd_features, attention_scores = attention_features(feat_x_pcd,feat_x_labelmap, feat_x_labelmap)
-
-            #TODO should we apply dropout here on the attended pcd features?
-
-            # add & norm
-            feat_x_pcd = feat_x_pcd + attended_partial_pcd_features
-            feat_x_pcd = self.norm1(feat_x_pcd)
-
-            # feed forward, add, norm
-            linear_out = self.linear_net(feat_x_pcd)
-            #TODO should we apply dropout here on the linear_out?
-            feat_x_pcd = feat_x_pcd + linear_out
-            feat_x_pcd = self.norm2(feat_x_pcd)
+            # pass through one layer to get 1024 features again
+            feat_combined = self.feature_selector(feat_concat)
 
             # feat_x_pcd comes = partial point cloud encoding, q is the distribution from partial
-            o_x = self.posterior_infer2(self.posterior_infer1(feat_x_pcd))
+            o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
 
             q_std = F.softplus(q_std)
@@ -552,22 +500,6 @@ class Model(nn.Module):
             ############ rough completion path ############
 
             ############ reconstruction path ############
-            """
-             
-            attended_complete_pcd_features, attention_scores_reconstr = attention_features(feat_x_labelmap,feat_y,feat_y)
-            # TODO should we apply dropout here on the attended pcd features?
-
-            # add & norm
-            feat_y = feat_y + attended_complete_pcd_features
-            feat_y = self.norm1(feat_y)
-
-            # feed forward, add, norm
-            linear_out = self.linear_net(feat_y)
-            # TODO should we apply dropout here on the linear_out?
-            feat_y = feat_y + linear_out
-            feat_y = self.norm2(feat_y)
-            """
-
             o_y = self.prior_infer(feat_y)
             p_mu, p_std = torch.split(o_y, self.size_z, dim=1)
             p_std = F.softplus(p_std)
@@ -579,9 +511,16 @@ class Model(nn.Module):
             ############ reconstruction path ############
 
             z = torch.cat([z_q, z_p], dim=0)
+            feat_pcd = torch.cat([feat_x_pcd, feat_x_pcd], dim=0)
+
 
         else:
-            o_x = self.posterior_infer2(self.posterior_infer1(feat_pcd))
+            # concatenate the features from the partial pcd with the ones from the labelmap
+            feat_concat = torch.cat([feat_pcd, feat_x_labelmap], dim=1)
+            # pass through one layer to get 1024 features again
+            feat_combined = self.feature_selector(feat_concat)
+
+            o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
             q_std = F.softplus(q_std)
             q_distribution = torch.distributions.Normal(q_mu, q_std)
@@ -658,16 +597,14 @@ class Model(nn.Module):
                 # stack them back
                 gt = np.stack(gts_aligned)
                 gt = torch.tensor(gt).float().to(device)
-                #x = np.stack(inputs_aligned)
-                #x = torch.tensor(x).float().to(device)
 
             # these will be list of tensors and in the end we stack them to one tensor
             cds_p_arch = []
             cds_t_arch = []
             f1s_arch = []
 
-
-            for pcd_idx in range(fine_cpu.shape[0]):
+            """
+                for pcd_idx in range(fine_cpu.shape[0]):
                 # create point cloud from GT
                 GT_pcd = o3d.geometry.PointCloud()
                 GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
@@ -702,6 +639,9 @@ class Model(nn.Module):
             f1_arch = torch.stack(f1s_arch)
             f1_arch = torch.reshape(f1_arch,(fine_cpu.shape[0],))
 
+            """
+
+
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
                 emd_arch = calc_emd(fine,gt, eps=0.004, iterations=3000)
@@ -712,5 +652,7 @@ class Model(nn.Module):
             # compute the metrics for the whole vertebral shape
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
 
+            #return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
+            #        'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
             return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
-                    'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
+                    'f1': f1, 'emd_arch': [],'cd_p_arch': [], 'cd_t_arch':[], 'f1_arch':[]}

@@ -4,6 +4,7 @@ import numpy as np
 import torch.optim as optim
 import torch
 # from utils.train_utils import *
+import wandb
 from train_utils import *
 import logging
 import math
@@ -149,25 +150,49 @@ def train():
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
-        labelmap = nib.load("/mnt/HDD1/miruna/data_preprocessing/verse/vertebrae/sub-verse821_verLev20/sub-verse821_CT-iso_msk_verLev202D_labelmap.nii.gz").get_fdata()[:,:,0][np.newaxis,np.newaxis,:,:]
-
         for i, data in enumerate(dataloader, 0):
             optimizer.zero_grad()
             if cascade_gan:
                 optimizer_d.zero_grad()
 
-            _, inputs, gt = data
+            _, partial_pcd, labelmap, gt = data
             # mean_feature = None
 
-            #TODO get labelmap from inputs
-            inputs = inputs.float().to(device)
-            gt = gt.float().to(device)
-            inputs = inputs.transpose(2, 1).contiguous()
-            labelmap = torch.from_numpy(labelmap)
+            """
+            inputs = partial_pcd[0, :, :].cpu().numpy()
+            gt_pcd = gt[0, :, :].cpu().numpy()
+            labelmap_pcd = labelmap[0,:,:].cpu().numpy()
+
+            filename = os.path.join('training_epoch_{:03d}.png'.format(epoch))
+            plot_pcd_one_view(filename=filename,
+                              pcds=[inputs, labelmap_pcd,gt_pcd],
+                              titles=["input_pcd","labelmap", "gt"])
+
+            wandb.log({"inputs_sanitycheck_at_training_time": wandb.Image(filename)})
+
+            """
+
+            partial_pcd = partial_pcd.float().to(device)
+            partial_pcd = partial_pcd.transpose(2, 1).contiguous()
+
             labelmap = labelmap.float().to(device)
+            labelmap = labelmap.transpose(2, 1).contiguous()
+
+            gt = gt.float().to(device)
 
             # out2, loss2, net_loss = net(inputs, gt, mean_feature=mean_feature, alpha=alpha)
-            out2, loss2, net_loss = net(inputs, labelmap, gt, alpha=alpha)
+            out2, loss2, net_loss = net(partial_pcd, labelmap, gt, alpha=alpha)
+
+            if(epoch%10 == 0):
+                inputs = partial_pcd[0, :, :].cpu().numpy().T
+                fine_pcd = out2[0, :, :].detach().cpu().numpy()
+                gt_pcd = gt[0, :, :].cpu().numpy()
+                filename = os.path.join('images/training_epoch_{:03d}.png'.format(epoch))
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, fine_pcd, gt_pcd],
+                                  titles=["input_pcd", "fine", "gt"])
+
+                wandb.log({"combined_pcds_training": wandb.Image(filename)})
 
             if cascade_gan:
                 d_fake = generator_step(net_d, out2, net_loss, optimizer)
@@ -180,7 +205,7 @@ def train():
             if i % args.step_interval_to_print == 0:
                 logging.info(exp_name + ' train [%d: %d/%d]  loss_type: %s, fine_loss: %f total_loss: %f lr: %f' %
                              (epoch, i, len(dataset) / args.batch_size, args.loss, loss2.mean().item(), net_loss.mean().item(), lr) + ' alpha: ' + str(alpha))
-                # wandb.log({"fine loss":loss2.mean().item(),"net_loss":net_loss.mean.item()})
+                wandb.log({"fine loss":loss2.mean().item(),"net_loss":net_loss.mean().item()})
         if epoch % args.epoch_interval_to_save == 0:
             save_model('%s/network.pth' % log_dir, net, net_d=net_d)
             logging.info("Saving net...")
@@ -197,14 +222,45 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
 
     with torch.no_grad():
         for i, data in enumerate(dataloader_test):
-            label, inputs, gt = data
+            label, partial_pcd, labelmap, gt = data
             # mean_feature = None
             curr_batch_size = gt.shape[0]
 
-            inputs = inputs.float().to(device)
+            """
+            inputs = partial_pcd[0, :, :].cpu().numpy()
+            gt_pcd = gt[0, :, :].cpu().numpy()
+            labelmap_pcd = labelmap[0,:,:].cpu().numpy()
+            filename = os.path.join('validation_epoch_{:03d}.png'.format(curr_epoch_num))
+            plot_pcd_one_view(filename=filename,
+                              pcds=[inputs, labelmap_pcd,gt_pcd],
+                              titles=["input_pcd", "labelmap","gt"])
+
+            wandb.log({"inputs_sanitycheck_at_validation_time": wandb.Image(filename)})
+            """
+
+            partial_pcd = partial_pcd.float().to(device)
+            partial_pcd = partial_pcd.transpose(2, 1).contiguous()
+
+            labelmap = labelmap.float().to(device)
+            labelmap = labelmap.transpose(2, 1).contiguous()
+
             gt = gt.float().to(device)
-            inputs = inputs.transpose(2, 1).contiguous()
-            result_dict = net(inputs, gt, prefix="val")
+
+            result_dict = net(partial_pcd, labelmap, gt, prefix="val")
+
+            # generate pcd images to log to wandb for the first pointcloud in each batch
+            if(curr_epoch_num%10 == 0):
+                inputs = result_dict["inputs"][0,:,:].cpu().numpy().T
+                fine_pcd = result_dict["result"][0,:,:].cpu().numpy()
+                coarse_pcd = result_dict["out1"][0,:,:].cpu().numpy()
+                gt_pcd = result_dict["gt"][0,:,:].cpu().numpy()
+                filename = os.path.join( 'images/validation_epoch_{:03d}.png'.format(curr_epoch_num))
+                plot_pcd_one_view(filename=filename,
+                                               pcds=[inputs, coarse_pcd, fine_pcd, gt_pcd],
+                                            titles=["input_pcd","coarse","fine","gt"])
+
+                wandb.log({"combined_pcds_validation": wandb.Image(filename)})
+
             for k, v in val_loss_meters.items():
                 v.update(result_dict[k].mean().item(), curr_batch_size)
 
@@ -223,6 +279,7 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
         curr_log = ''
         for loss_type, meter in val_loss_meters.items():
             curr_log += 'curr_%s: %f; ' % (loss_type, meter.avg)
+            wandb.log({loss_type: meter.avg})
 
         logging.info(curr_log)
         logging.info(best_log)
@@ -236,8 +293,9 @@ if __name__ == "__main__":
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
 
-    # wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
-    # wandb.init(project="VRCNet-Training")
+    wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
+    wandb.init(project="Multimodal Shape Completion")
+    wandb.config.update(args)
 
     torch.cuda.empty_cache()
 

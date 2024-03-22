@@ -37,6 +37,7 @@ class verse2020_lumbar(data.Dataset):
         self.gt_data = np.array(input_file['complete_pcds'][()])
         self.labels = np.array(input_file['labels'][()])
         self.number_per_classes = np.array(input_file['number_per_class'][()])
+        self.xray_labelmaps = np.array(input_file['labelmaps'][()])
         self.num_partial_scans_per_mesh = num_partial_scans_per_mesh
 
         print(self.gt_data.shape, self.labels.shape)
@@ -56,9 +57,12 @@ class verse2020_lumbar(data.Dataset):
             partial = add_gaussian_noise(partial,self.sigma)
 
         partial = torch.from_numpy(partial)
+
+        # for the case in which we have multiple incomplete for one GT
         complete = torch.from_numpy((self.gt_data[index // self.num_partial_scans_per_mesh]))
+        labelmap = torch.from_numpy(self.xray_labelmaps[index//self.num_partial_scans_per_mesh])
         label = (self.labels[index])
-        return label, partial, complete
+        return label, partial, labelmap, complete
 
 
 class MVP_CP(data.Dataset):
