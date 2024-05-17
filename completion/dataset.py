@@ -8,7 +8,7 @@ import sys
 
 # in the paper they consider 26 partial scans per mesh
 sys.path.append("utils")
-from mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, grouping_operation
+from mmcv.ops import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 
 class verse2020_lumbar(data.Dataset):
 

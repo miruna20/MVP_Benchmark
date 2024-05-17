@@ -20,7 +20,7 @@ device = 'cuda'
 # from utils.mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 # from ..utils import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 sys.path.append("../utils")
-from mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, grouping_operation
+from mmcv.ops import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 
 
 
@@ -105,7 +105,7 @@ class Linear_ResBlock(nn.Module):
         self.conv2 = nn.Linear(input_size, output_size)
         self.conv_res = nn.Linear(input_size, output_size)
 
-        self.af = nn.ReLU(inplace=True)
+        self.af = nn.ReLU(inplace=False)
 
     def forward(self, feature):
         return self.conv2(self.af(self.conv1(self.af(feature)))) + self.conv_res(feature)
@@ -654,5 +654,10 @@ class Model(nn.Module):
 
             #return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
             #        'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
-            return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
-                    'f1': f1, 'emd_arch': [],'cd_p_arch': [], 'cd_t_arch':[], 'f1_arch':[]}
+            return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p,
+                    'cd_t': cd_t,
+                    'f1': f1, 'emd_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+                    'cd_p_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+                    'cd_t_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+                    'f1_arch': torch.empty(f1.shape, dtype=torch.float32).to(device)}
+

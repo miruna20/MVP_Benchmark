@@ -19,7 +19,6 @@ import argparse
 from dataset import MVP_CP
 from dataset import verse2020_lumbar
 import os
-import nibabel as nib
 from torch.nn.parallel import DistributedDataParallel
 
 
@@ -184,6 +183,7 @@ def train():
             out2, loss2, net_loss = net(partial_pcd, labelmap, gt, alpha=alpha)
 
             if(epoch%10 == 0):
+                # TODO add to the figure and only log it in the end of the epoch, otherwise we log per step
                 inputs = partial_pcd[0, :, :].cpu().numpy().T
                 fine_pcd = out2[0, :, :].detach().cpu().numpy()
                 gt_pcd = gt[0, :, :].cpu().numpy()

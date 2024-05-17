@@ -1,11 +1,9 @@
-import torch
 import math
-import os
 import sys
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
 
 # proj_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # sys.path.append(os.path.join(proj_dir, "utils/Pointnet2.PyTorch/pointnet2"))
@@ -16,9 +14,9 @@ import torch.nn.functional as F
 # from chamfer3D import dist_chamfer_3D
 # from fscore import fscore
 
-sys.path.append("utils")
-from metrics import cd, fscore, emd
-from mm3d_pn2 import furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
+#sys.path.append("utils")
+from utils.metrics import cd, fscore, emd
+from mmcv.ops import furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
 
 # from ..utils import cd, fscore, emd, furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
 

@@ -91,13 +91,17 @@ def test():
         for i, data in enumerate(dataloader_test):
 
             # inputs_cpu = data
-            label, inputs_cpu, gt = data
+            label, partial_pcd, labelmap, gt = data
 
-            inputs = inputs_cpu.float().to(device)
-            inputs = inputs.transpose(2, 1).contiguous()
+            partial_pcd = partial_pcd.float().to(device)
+            partial_pcd = partial_pcd.transpose(2, 1).contiguous()
+
+            labelmap = labelmap.float().to(device)
+            labelmap = labelmap.transpose(2, 1).contiguous()
+
             gt = gt.float().to(device)
 
-            result_dict = net(inputs, gt, prefix=prefix)
+            result_dict = net(partial_pcd, labelmap, gt, prefix=prefix)
 
             # this updates average metrics
             for k, v in test_loss_meters.items():

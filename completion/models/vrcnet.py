@@ -17,7 +17,7 @@ device = 'cuda'
 # from utils.mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 # from ..utils import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 sys.path.append("../utils")
-from mm3d_pn2 import three_interpolate, furthest_point_sample, gather_points, grouping_operation
+from mmcv.ops import three_interpolate, furthest_point_sample, gather_points, grouping_operation
 
 
 class SA_module(nn.Module):

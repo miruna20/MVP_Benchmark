@@ -1,15 +1,15 @@
 batch_size: 2
 workers: 0
 nepoch: 100
-model_name: vrcnet
+model_name: vrcnet_multimodal
 load_model: False
 start_epoch: 0
 num_points: 4096
 num_partial_scans_per_mesh: 1
 
-path_to_train_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_training.h5
-path_to_val_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_validation.h5
-path_to_test_dataset: /home/polyaxon-data/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_test.h5
+path_to_train_dataset: /home/data/miruna/shape_completion/with_labelmaps/dataset_training.h5
+path_to_val_dataset: /home/data/miruna/shape_completion/with_labelmaps/dataset_val.h5
+path_to_test_dataset: /home/data/miruna/shape_completion/with_labelmaps/dataset_test.h5
 
 work_dir: log/
 flag: debug

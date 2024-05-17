@@ -5,4 +5,4 @@ open3d
 PyYAML
 ninja
 future
-polyaxon-client
+wandb

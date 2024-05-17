@@ -1,7 +1,7 @@
-batch_size: 2
+batch_size: 4
 workers: 0
 nepoch: 100
-model_name: vrcnet
+model_name: vrcnet_multimodal
 
 #EXP1 feasibility experiment
 #load_model: /mnt/HDD1/miruna/shape_completion/model/model_lumbar_verse20_experiment104486/best_cd_t_network_exp104486.pth
@@ -28,56 +28,17 @@ model_name: vrcnet
 #load_model: /home/miruna_gafencu/Documents/ShapeCompletion/VRCNet/MVP_Benchmark/log/phantom_specializingmodel/best_cd_t_network.pth
 
 #Complete pipeline
-load_model: log/vrcnet_cd_debug_2024-02-08T12:09:38/best_cd_t_network.pth
+#load_model: log/vrcnet_cd_debug_2024-02-08T12:09:38/best_cd_t_network.pth
+# training with the vert bodies as labelmaps
+load_model: log/vertBodiesLabelmapsExperiment/best_cd_t_network.pth
+
 
 num_partial_scans_per_mesh: 1
-path_to_train_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_training.h5
-path_to_val_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_validation.h5
-path_to_test_dataset: /mnt/polyaxon/data1/USShapeCompletion/MVP/completion/data/new_pipeline/4096/complete_pipeline/relativeScaling_alignedWIthSynthetic_newSplitting/dataset_verse_test.h5
+path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_training_vertbodylabelmaps.h5
+path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_validation_vertbodylabelmaps.h5
+path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_test_vertbodylabelmaps.h5
 
-
-# TEST DATASETS PATIENTS
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/dataset_Maria.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient8.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_IFL.h5
-#path_to_test_dataset: /mnt/projects/deepSpine/CTUSFromQueens/phantom_IFL/US_data/segm_with_helpof_CT/phantom_IFL.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/new_tamas_data/dataset_axial.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/patient6_automaticseparation.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/phantom_experiment_3.h5
-
-
-# TEST DATASETS SYNTHETIC
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_from_CT/verse20_lumbarVert_test.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_complete/dataset_verse_test_complete_pipeline.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_no_deform/dataset_verse_test_no_deform.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_noUSartefact/dataset_verse_test_noUSartefact.h5
-#path_to_test_dataset: /mnt/HDD1/miruna/shape_completion/data/data_new_pipeline_4096_unpolluted/dataset_verse_test_unpolluted.h5
-
-#name_folder_to_save_results: synthetic/exp1_data_from_CT
-#name_folder_to_save_results: synthetic/exp2_complete_pipeline_synthetic_with_emd
-#name_folder_to_save_results: synthetic/exp3_no_deform_synthetic
-#name_folder_to_save_results: synthetic/exp4_noUSartefact_synthetic
-#name_folder_to_save_results: synthetic/exp5_unpolluted_synthetic
-
-#name_folder_to_save_results: exp2_complete_pipeline_patient6_with_emd
-#name_folder_to_save_results: exp3_no_deform_patient6_with_emd
-#name_folder_to_save_results: exp4_noUSartefact_patient6_with_emd
-#name_folder_to_save_results: exp5_unpolluted_patient6
-
-#name_folder_to_save_results: exp2_complete_pipeline_patient8_with_emd
-#name_folder_to_save_results: exp3_no_deform_patient8_with_emd
-#name_folder_to_save_results: exp4_noUSartefact_patient8_with_emd
-#name_folder_to_save_results: exp5_unpolluted_patient8_with_emd
-
-#name_folder_to_save_results: exp5_automaticseparation_patient6
-
-#name_folder_to_save_results: exp2_complete_pipeline_phantom_IFL
-#name_folder_to_save_results: exp2_complete_pipeline_phantom_IFL_withhelpofCT
-#name_folder_to_save_results: exp2_newTamasData_axial
-
-name_folder_to_save_results: complete_pipeline_synthetic_data
+name_folder_to_save_results: vertBodiesLabelmapsExperiment
 
 data_to_test: test
 start_epoch: 0
