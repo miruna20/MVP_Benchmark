@@ -448,6 +448,7 @@ class Model(nn.Module):
                                         num_coarse_raw=args.num_coarse_raw, layers=layers, knn_list=knn_list,
                                         pk=args.pk, local_folding=args.local_folding, points_label=args.points_label)
         self.feature_selector = MLP_feature_selection(global_feature_size*2)
+        self.use_labelmap = args.use_labelmaps
     def compute_kernel(self, x, y):
         x_size = x.size()[0]
         y_size = y.size()[0]
@@ -490,7 +491,10 @@ class Model(nn.Module):
             feat_combined = self.feature_selector(feat_concat)
 
             # feat_x_pcd comes = partial point cloud encoding, q is the distribution from partial
-            o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
+            if(self.use_labelmap):
+                o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
+            else:
+                o_x = self.posterior_infer2(self.posterior_infer1(feat_x_pcd))
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
 
             q_std = F.softplus(q_std)
@@ -520,7 +524,11 @@ class Model(nn.Module):
             # pass through one layer to get 1024 features again
             feat_combined = self.feature_selector(feat_concat)
 
-            o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
+            if(self.use_labelmap):
+                o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
+            else:
+                o_x = self.posterior_infer2(self.posterior_infer1(feat_pcd))
+
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
             q_std = F.softplus(q_std)
             q_distribution = torch.distributions.Normal(q_mu, q_std)
@@ -603,8 +611,8 @@ class Model(nn.Module):
             cds_t_arch = []
             f1s_arch = []
 
-            """
-                for pcd_idx in range(fine_cpu.shape[0]):
+
+            for pcd_idx in range(fine_cpu.shape[0]):
                 # create point cloud from GT
                 GT_pcd = o3d.geometry.PointCloud()
                 GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
@@ -639,8 +647,6 @@ class Model(nn.Module):
             f1_arch = torch.stack(f1s_arch)
             f1_arch = torch.reshape(f1_arch,(fine_cpu.shape[0],))
 
-            """
-
 
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
@@ -656,8 +662,16 @@ class Model(nn.Module):
             #        'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
             return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p,
                     'cd_t': cd_t,
-                    'f1': f1, 'emd_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
-                    'cd_p_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
-                    'cd_t_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
-                    'f1_arch': torch.empty(f1.shape, dtype=torch.float32).to(device)}
+                    'f1': f1,
+                    'emd_arch':emd_arch,
+                    'cd_p_arch':cd_p_arch,
+                    'cd_t_arch': cd_t_arch,
+                        'f1_arch':f1_arch}
+            """
+            'emd_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+            'cd_p_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+            'cd_t_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
+            'f1_arch': torch.empty(f1.shape, dtype=torch.float32).to(device)}
+
+            """
 
