@@ -28,6 +28,7 @@ def test():
                                     test_path=args.path_to_test_dataset,
                                     apply_trafo=args.apply_trafo,
                                     sigma = args.sigma,
+                                    Xray_labelmap=args.use_labelmaps,
                                     prefix=prefix,
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
@@ -96,8 +97,9 @@ def test():
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
 
-            labelmap = labelmap.float().to(device)
-            labelmap = labelmap.transpose(2, 1).contiguous()
+            if (args.use_labelmaps):
+                labelmap = labelmap.float().to(device)
+                labelmap = labelmap.transpose(2, 1).contiguous()
 
             gt = gt.float().to(device)
 

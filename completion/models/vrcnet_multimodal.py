@@ -464,7 +464,7 @@ class Model(nn.Module):
         xy_kernel = self.compute_kernel(x, y)
         return torch.mean(x_kernel) + torch.mean(y_kernel) - 2 * torch.mean(xy_kernel)
 
-    def forward(self, x_pcd, x_labelmap, gt=None, prefix="train", mean_feature=None, alpha=None):
+    def forward(self, x_pcd, x_labelmap=None, gt=None, prefix="train", mean_feature=None, alpha=None):
 
         if prefix == "train":
             y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
@@ -476,25 +476,26 @@ class Model(nn.Module):
             points = x_pcd
 
         feat_pcd = self.encoder_pcd(points)
-        feat_x_labelmap = self.encoder_labelmap(x_labelmap)
+        if(self.use_labelmap):
+            feat_x_labelmap = self.encoder_labelmap(x_labelmap)
 
         if prefix == "train":
             # for training we have both a reconstruction path and a completion path
             feat_x_pcd, feat_y = feat_pcd.chunk(2)
 
             ############ rough completion path ############
+            if (self.use_labelmap):
+                # concatenate the feature vectors from the partial pcd and from the labelmaps
+                feat_concat = torch.cat([feat_x_pcd,feat_x_labelmap],dim=1)
 
-            # concatenate the feature vectors from the partial pcd and from the labelmaps
-            feat_concat = torch.cat([feat_x_pcd,feat_x_labelmap],dim=1)
-
-            # pass through one layer to get 1024 features again
-            feat_combined = self.feature_selector(feat_concat)
+                # pass through one layer to get 1024 features again
+                feat_combined = self.feature_selector(feat_concat)
+                o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
 
             # feat_x_pcd comes = partial point cloud encoding, q is the distribution from partial
-            if(self.use_labelmap):
-                o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
             else:
                 o_x = self.posterior_infer2(self.posterior_infer1(feat_x_pcd))
+
             q_mu, q_std = torch.split(o_x, self.size_z, dim=1)
 
             q_std = F.softplus(q_std)
@@ -520,11 +521,12 @@ class Model(nn.Module):
 
         else:
             # concatenate the features from the partial pcd with the ones from the labelmap
-            feat_concat = torch.cat([feat_pcd, feat_x_labelmap], dim=1)
-            # pass through one layer to get 1024 features again
-            feat_combined = self.feature_selector(feat_concat)
-
             if(self.use_labelmap):
+
+                feat_concat = torch.cat([feat_pcd, feat_x_labelmap], dim=1)
+                # pass through one layer to get 1024 features again
+                feat_combined = self.feature_selector(feat_concat)
+
                 o_x = self.posterior_infer2(self.posterior_infer1(feat_combined))
             else:
                 o_x = self.posterior_infer2(self.posterior_infer1(feat_pcd))

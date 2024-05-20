@@ -12,7 +12,7 @@ from mmcv.ops import three_interpolate, furthest_point_sample, gather_points, gr
 
 class verse2020_lumbar(data.Dataset):
 
-    def __init__(self, train_path, val_path, test_path, apply_trafo=True, sigma=0.005, prefix="train", num_partial_scans_per_mesh=16):
+    def __init__(self, train_path, val_path, test_path, apply_trafo=True, sigma=0.005, Xray_labelmap=True, prefix="train", num_partial_scans_per_mesh=16):
         logging.info("Using vertebrae dataset")
         if prefix == "train":
             self.file_path = train_path
@@ -26,6 +26,7 @@ class verse2020_lumbar(data.Dataset):
             raise ValueError("ValueError prefix should be [train/val/test] ")
         self.apply_trafo = apply_trafo
         self.sigma = sigma
+        self.Xray_labelmap = Xray_labelmap
 
         self.prefix = prefix
 
@@ -37,7 +38,8 @@ class verse2020_lumbar(data.Dataset):
         self.gt_data = np.array(input_file['complete_pcds'][()])
         self.labels = np.array(input_file['labels'][()])
         self.number_per_classes = np.array(input_file['number_per_class'][()])
-        self.xray_labelmaps = np.array(input_file['labelmaps'][()])
+        if(self.Xray_labelmap):
+            self.xray_labelmaps = np.array(input_file['labelmaps'][()])
         self.num_partial_scans_per_mesh = num_partial_scans_per_mesh
 
         print(self.gt_data.shape, self.labels.shape)
@@ -60,9 +62,14 @@ class verse2020_lumbar(data.Dataset):
 
         # for the case in which we have multiple incomplete for one GT
         complete = torch.from_numpy((self.gt_data[index // self.num_partial_scans_per_mesh]))
-        labelmap = torch.from_numpy(self.xray_labelmaps[index//self.num_partial_scans_per_mesh])
         label = (self.labels[index])
-        return label, partial, labelmap, complete
+
+        if(self.Xray_labelmap):
+            labelmap = torch.from_numpy(self.xray_labelmaps[index//self.num_partial_scans_per_mesh])
+        else:
+            labelmap = np.empty(2)
+
+        return label,partial,labelmap,complete
 
 
 class MVP_CP(data.Dataset):

@@ -46,6 +46,7 @@ def train():
                                test_path=args.path_to_test_dataset,
                                apply_trafo=args.apply_trafo,
                                sigma = args.sigma,
+                               Xray_labelmap=args.use_labelmaps,
                                prefix = "train",
                                num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
                                )
@@ -54,6 +55,7 @@ def train():
                                     test_path=args.path_to_test_dataset,
                                     apply_trafo=args.apply_trafo,
                                     sigma=args.sigma,
+                                    Xray_labelmap=args.use_labelmaps,
                                     prefix="val",
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
                                    )
@@ -155,6 +157,11 @@ def train():
                 optimizer_d.zero_grad()
 
             _, partial_pcd, labelmap, gt = data
+
+            if(args.use_labelmaps):
+                labelmap = labelmap.float().to(device)
+                labelmap = labelmap.transpose(2, 1).contiguous()
+
             # mean_feature = None
 
             """
@@ -173,9 +180,6 @@ def train():
 
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
-
-            labelmap = labelmap.float().to(device)
-            labelmap = labelmap.transpose(2, 1).contiguous()
 
             gt = gt.float().to(device)
 
@@ -241,8 +245,9 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
 
-            labelmap = labelmap.float().to(device)
-            labelmap = labelmap.transpose(2, 1).contiguous()
+            if(args.use_labelmaps):
+                labelmap = labelmap.float().to(device)
+                labelmap = labelmap.transpose(2, 1).contiguous()
 
             gt = gt.float().to(device)
 
