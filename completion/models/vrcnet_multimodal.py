@@ -613,28 +613,53 @@ class Model(nn.Module):
             cds_t_arch = []
             f1s_arch = []
 
+            # fine_cpu.shape[0] --> number of shapes in the current batch
+            nr_shapes = fine_cpu.shape[0]
 
-            for pcd_idx in range(fine_cpu.shape[0]):
-                # create point cloud from GT
-                GT_pcd = o3d.geometry.PointCloud()
-                GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
-                center_of_mass = GT_pcd.get_center()
+            # ToDo get the arches directly as a tensor
+            # compute the center of mass of the GT shapes
+            centers_of_mass = gt.mean(dim=1)
 
-                # create a new GT point cloud only with the points that are in the vertebral arch
-                GT_points = np.asarray(GT_pcd.points)
-                y_coord_center_of_mass = center_of_mass[1]
-                gt_arch = np.asarray([point for point in GT_points if point[1] > y_coord_center_of_mass])
-                #gt_arches.append(GT_arch)
+            # get the vert arch of the GT
+            # Get the second coordinate (y-coordinate) of the centers of mass
+            centers_of_mass_y = centers_of_mass[:, 1].unsqueeze(1)
 
-                # create a new completion point cloud only with the points that are above the center of mass
-                completion_arch = np.asarray([point for point in fine_cpu[pcd_idx] if point[1] > y_coord_center_of_mass])
-                #completion_arches.append(completion_arch)
+            # Compare each point's y-coordinate with the center of mass y-coordinate
+            # shapes[:, :, 1] gives all y-coordinates of all points
+            # The comparison results in a boolean mask
+            mask_gt = gt[:, :, 1] > centers_of_mass_y
+            mask_completed = fine[:, :, 1] > centers_of_mass_y
 
-                completion_arch = completion_arch[np.newaxis,:,:]
-                gt_arch = gt_arch[np.newaxis,:,:]
 
-                completion_arch = torch.tensor(completion_arch).float().to(device)
-                gt_arch = torch.tensor(gt_arch).float().to(device)
+            for pcd_idx in range(nr_shapes):
+                gt_arch = gt[pcd_idx][mask_gt[pcd_idx]]
+                completion_arch = fine[pcd_idx][mask_completed[pcd_idx]]
+
+                """temp for testing"""
+                """
+                # Save gt_arch as a point cloud
+                gt_arch_cpu= gt_arch.cpu().numpy()
+                completion_arch_cpu = completion_arch.cpu().numpy()
+
+                gt_arch_pcd = o3d.geometry.PointCloud()
+                gt_arch_pcd.points = o3d.utility.Vector3dVector(gt_arch_cpu)
+                gt_arch_file = "refactored_vertArch/gt_arch" + str(pcd_idx) + ".pcd"
+                o3d.io.write_point_cloud(gt_arch_file, gt_arch_pcd)
+                print(f"GT arch point cloud saved to {gt_arch_file}")
+
+                # Save completion_arch as a point cloud
+                completion_arch_pcd = o3d.geometry.PointCloud()
+                completion_arch_pcd.points = o3d.utility.Vector3dVector(completion_arch_cpu)
+                completion_arch_file = "refactored_vertArch/completion_arch" + str(pcd_idx) + ".pcd"
+                o3d.io.write_point_cloud(completion_arch_file, completion_arch_pcd)
+                print(f"Completion arch point cloud saved to {completion_arch_file}")
+                """
+                """temp for testing"""
+
+
+                # add batch size dimension
+                completion_arch = completion_arch[np.newaxis, :, :]
+                gt_arch = gt_arch[np.newaxis, :, :]
 
                 # compute here the metrics only for one shape
                 cd_p_arch, cd_t_arch, f1_arch = calc_cd(completion_arch, gt_arch, calc_f1=True)

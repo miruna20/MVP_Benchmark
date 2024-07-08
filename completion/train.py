@@ -164,19 +164,23 @@ def train():
 
             # mean_feature = None
 
-            """
+
             inputs = partial_pcd[0, :, :].cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
-            labelmap_pcd = labelmap[0,:,:].cpu().numpy()
-
             filename = os.path.join('training_epoch_{:03d}.png'.format(epoch))
-            plot_pcd_one_view(filename=filename,
-                              pcds=[inputs, labelmap_pcd,gt_pcd],
-                              titles=["input_pcd","labelmap", "gt"])
+            if (args.use_labelmaps):
+                labelmap_pcd = labelmap[0,:,:].cpu().numpy().T
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, labelmap_pcd,gt_pcd],
+                                  titles=["input_pcd","XrayLabelmap", "gt"])
+            else:
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, gt_pcd],
+                                  titles=["input_pcd", "gt"])
 
             wandb.log({"inputs_sanitycheck_at_training_time": wandb.Image(filename)})
 
-            """
+
 
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
@@ -186,17 +190,24 @@ def train():
             # out2, loss2, net_loss = net(inputs, gt, mean_feature=mean_feature, alpha=alpha)
             out2, loss2, net_loss = net(partial_pcd, labelmap, gt, alpha=alpha)
 
-            if(epoch%10 == 0):
-                # TODO add to the figure and only log it in the end of the epoch, otherwise we log per step
-                inputs = partial_pcd[0, :, :].cpu().numpy().T
-                fine_pcd = out2[0, :, :].detach().cpu().numpy()
-                gt_pcd = gt[0, :, :].cpu().numpy()
-                filename = os.path.join('images/training_epoch_{:03d}.png'.format(epoch))
+            #if(epoch%10 == 0):
+            # TODO add to the figure and only log it in the end of the epoch, otherwise we log per step
+            inputs = partial_pcd[0, :, :].cpu().numpy().T
+            fine_pcd = out2[0, :, :].detach().cpu().numpy()
+            gt_pcd = gt[0, :, :].cpu().numpy()
+            filename = os.path.join('images/training_epoch_{:03d}.png'.format(epoch))
+            if(args.use_labelmaps):
+                labelmap_pcd = labelmap[0, :, :].cpu().numpy().T
+                plot_pcd_one_view(filename=filename,
+                              pcds=[inputs, labelmap_pcd, fine_pcd, gt_pcd],
+                              titles=["input_pcd", "XrayLabelmap", "fine", "gt"])
+            else:
                 plot_pcd_one_view(filename=filename,
                                   pcds=[inputs, fine_pcd, gt_pcd],
                                   titles=["input_pcd", "fine", "gt"])
 
-                wandb.log({"combined_pcds_training": wandb.Image(filename)})
+
+            wandb.log({"combined_pcds_training": wandb.Image(filename)})
 
             if cascade_gan:
                 d_fake = generator_step(net_d, out2, net_loss, optimizer)
@@ -230,17 +241,22 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             # mean_feature = None
             curr_batch_size = gt.shape[0]
 
-            """
+
             inputs = partial_pcd[0, :, :].cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
-            labelmap_pcd = labelmap[0,:,:].cpu().numpy()
             filename = os.path.join('validation_epoch_{:03d}.png'.format(curr_epoch_num))
-            plot_pcd_one_view(filename=filename,
-                              pcds=[inputs, labelmap_pcd,gt_pcd],
-                              titles=["input_pcd", "labelmap","gt"])
+            if(args.use_labelmaps):
+                labelmap_pcd = labelmap[0,:,:].cpu().numpy()
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, labelmap_pcd,gt_pcd],
+                                  titles=["input_pcd", "XrayLabelmap","gt"])
+            else:
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, gt_pcd],
+                                  titles=["input_pcd", "gt"])
 
             wandb.log({"inputs_sanitycheck_at_validation_time": wandb.Image(filename)})
-            """
+
 
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
@@ -254,17 +270,24 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             result_dict = net(partial_pcd, labelmap, gt, prefix="val")
 
             # generate pcd images to log to wandb for the first pointcloud in each batch
-            if(curr_epoch_num%10 == 0):
-                inputs = result_dict["inputs"][0,:,:].cpu().numpy().T
-                fine_pcd = result_dict["result"][0,:,:].cpu().numpy()
-                coarse_pcd = result_dict["out1"][0,:,:].cpu().numpy()
-                gt_pcd = result_dict["gt"][0,:,:].cpu().numpy()
-                filename = os.path.join( 'images/validation_epoch_{:03d}.png'.format(curr_epoch_num))
+            #if(curr_epoch_num%10 == 0):
+            inputs = result_dict["inputs"][0,:,:].cpu().numpy().T
+            fine_pcd = result_dict["result"][0, :, :].cpu().numpy()
+            coarse_pcd = result_dict["out1"][0, :, :].cpu().numpy()
+            gt_pcd = result_dict["gt"][0, :, :].cpu().numpy()
+            filename = os.path.join('images/validation_epoch_{:03d}.png'.format(curr_epoch_num))
+            if(args.use_labelmaps):
+                labelmap_pcd = labelmap[0, :, :].cpu().numpy().T
                 plot_pcd_one_view(filename=filename,
-                                               pcds=[inputs, coarse_pcd, fine_pcd, gt_pcd],
-                                            titles=["input_pcd","coarse","fine","gt"])
+                                  pcds=[inputs, labelmap_pcd, coarse_pcd, fine_pcd, gt_pcd],
+                                  titles=["input_pcd", "XrayLabelmap", "coarse", "fine", "gt"])
+            else:
+                plot_pcd_one_view(filename=filename,
+                                  pcds=[inputs, coarse_pcd, fine_pcd, gt_pcd],
+                                  titles=["input_pcd", "coarse", "fine", "gt"])
 
-                wandb.log({"combined_pcds_validation": wandb.Image(filename)})
+
+            wandb.log({"combined_pcds_validation": wandb.Image(filename)})
 
             for k, v in val_loss_meters.items():
                 v.update(result_dict[k].mean().item(), curr_batch_size)
