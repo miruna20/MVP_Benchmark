@@ -164,7 +164,6 @@ def train():
 
             # mean_feature = None
 
-
             inputs = partial_pcd[0, :, :].cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
             filename = os.path.join('training_epoch_{:03d}.png'.format(epoch))
@@ -222,8 +221,38 @@ def train():
                              (epoch, i, len(dataset) / args.batch_size, args.loss, loss2.mean().item(), net_loss.mean().item(), lr) + ' alpha: ' + str(alpha))
                 wandb.log({"fine loss":loss2.mean().item(),"net_loss":net_loss.mean().item()})
         if epoch % args.epoch_interval_to_save == 0:
-            save_model('%s/network.pth' % log_dir, net, net_d=net_d)
+            model_path = '%s/network.pth' % log_dir
+            save_model(model_path, net, net_d=net_d)
             logging.info("Saving net...")
+
+        """
+        artifact = wandb.Artifact(f'model-epoch-{epoch}', type='model')
+        artifact.add_file(model_path)
+        wandb.log_artifact(artifact)
+        """
+
+        # get a dictionary
+        param_dict = dict(net.named_parameters())
+        #params_to_log = ["module.feature_selector.fc1.weight",
+        #                 "module.feature_selector.fc2.weight"]
+
+        params_to_log = ["module.feature_selector.fc1.weight"]
+
+        # access only the feature selector weights
+        half_size = 1024
+        for param in params_to_log:
+            # output them in a couple of ways in which we can monitor them
+            layer_weights = param_dict[param].data.cpu().numpy()
+
+            layer_weights_partialPCD = layer_weights[:,:half_size]
+            layer_weights_partialPCD_norm = np.linalg.norm(layer_weights_partialPCD)
+
+            layer_weights_XraySegmPCD = layer_weights[:, half_size:]
+            layer_weights_XraySegmPCD_norm = np.linalg.norm(layer_weights_XraySegmPCD)
+
+            wandb.log({f"weights_partialPCD/{param}": layer_weights_partialPCD_norm})
+            wandb.log({f"weights_XraySegmPCD/{param}": layer_weights_XraySegmPCD_norm})
+
 
         if epoch % args.epoch_interval_to_val == 0 or epoch == args.nepoch - 1:
             val(net, epoch, val_loss_meters, dataloader_test, best_epoch_losses)

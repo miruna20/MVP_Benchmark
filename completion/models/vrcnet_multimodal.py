@@ -566,11 +566,101 @@ class Model(nn.Module):
                 loss2, _ = calc_cd(coarse_high, gt)
                 loss3, _ = calc_cd(coarse, gt)
                 loss4, _ = calc_cd(fine, gt)
+
+                # Idea: add loss component of vert body to the total loss
+                # Calculate centers of mass
+                centers_of_mass = gt.mean(dim=1)
+                centers_of_mass_y = centers_of_mass[:, 1].unsqueeze(1)
+
+                # Create masks
+                mask_gt = gt[:, :, 1] < centers_of_mass_y
+                mask_coarse_raw = coarse_raw[:, :, 1] < centers_of_mass_y
+                mask_coarse_high = coarse_high[:, :, 1] < centers_of_mass_y
+                mask_coarse = coarse[:, :, 1] < centers_of_mass_y
+                mask_fine = fine[:, :, 1] < centers_of_mass_y
+
+                def calc_cd_and_point_cloud(completion_body, gt_body):
+                    completion_body = completion_body[np.newaxis, :, :]
+                    gt_body = gt_body[np.newaxis, :, :]
+                    cd_p, _ = calc_cd(completion_body, gt_body)
+                    points_np = completion_body.detach().cpu().numpy()
+                    return cd_p, points_np
+
+                # Define a function to save point cloud to a file using Open3D
+                def save_point_cloud(points_np, filename):
+                    pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(points_np[0,:,:])
+                    o3d.io.write_point_cloud(filename, pcd)
+
+                output_dir = "testing_loss_vertbody"
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Initialize loss accumulators
+                avg_loss1_vertBody = torch.zeros(fine.size(0)).to(device)
+                avg_loss2_vertBody = torch.zeros(fine.size(0)).to(device)
+                avg_loss3_vertBody = torch.zeros(fine.size(0)).to(device)
+                avg_loss4_vertBody = torch.zeros(fine.size(0)).to(device)
+
+                # Iterate over each element (assuming 'fine.size(0)' gives the number of elements)
+                debug = False  # Set to True for debug mode, False otherwise
+                large_value = 10
+                for i in range(fine.size(0)):
+                    gt_body = gt[i][mask_gt[i]]
+
+                    # Calculate losses and point clouds
+                    if mask_coarse_raw[i].any():
+                        loss1_vertBody, points1 = calc_cd_and_point_cloud(coarse_raw[i][mask_coarse_raw[i]], gt_body)
+                        if debug:
+                            save_point_cloud(points1, os.path.join(output_dir, f'coarse_raw_body_{i}.pcd'))
+                    else:
+                        loss1_vertBody = large_value  # Set to large value if no valid points
+                        if debug:
+                            save_point_cloud(coarse_raw[i].detach().cpu().numpy()[np.newaxis, :, :],
+                                             os.path.join(output_dir, f'coarse_raw_body_{i}_no_points.pcd'))
+                    avg_loss1_vertBody[i] = loss1_vertBody
+
+                    if mask_coarse_high[i].any():
+                        loss2_vertBody, points2 = calc_cd_and_point_cloud(coarse_high[i][mask_coarse_high[i]], gt_body)
+                        if debug:
+                            save_point_cloud(points2, os.path.join(output_dir, f'coarse_high_body_{i}.pcd'))
+                    else:
+                        loss2_vertBody = large_value  # Set to large value if no valid points
+                        if debug:
+                            save_point_cloud(coarse_high[i].detach().cpu().numpy()[np.newaxis, :, :],
+                                             os.path.join(output_dir, f'coarse_high_body_{i}_no_points.pcd'))
+                    avg_loss2_vertBody[i] = loss2_vertBody
+
+                    if mask_coarse[i].any():
+                        loss3_vertBody, points3 = calc_cd_and_point_cloud(coarse[i][mask_coarse[i]], gt_body)
+                        if debug:
+                            save_point_cloud(points3, os.path.join(output_dir, f'coarse_body_{i}.pcd'))
+                    else:
+                        loss3_vertBody = large_value  # Set to large value if no valid points
+                        if debug:
+                            save_point_cloud(coarse[i].detach().cpu().numpy()[np.newaxis, :, :],
+                                             os.path.join(output_dir, f'coarse_body_{i}_no_points.pcd'))
+                    avg_loss3_vertBody[i] = loss3_vertBody
+
+                    if mask_fine[i].any():
+                        loss4_vertBody, points4 = calc_cd_and_point_cloud(fine[i][mask_fine[i]], gt_body)
+                        if debug:
+                            save_point_cloud(points4, os.path.join(output_dir, f'fine_body_{i}.pcd'))
+                    else:
+                        loss4_vertBody = large_value  # Set to large value if no valid points
+                        if debug:
+                            save_point_cloud(fine[i].detach().cpu().numpy()[np.newaxis, :, :],
+                                             os.path.join(output_dir, f'fine_body_{i}_no_points.pcd'))
+                    avg_loss4_vertBody[i] = loss4_vertBody
+
+
             else:
                 raise NotImplementedError('Only CD is supported')
 
             total_train_loss = loss1.mean() * 10 + loss2.mean() * 0.5 + loss3.mean() + loss4.mean() * alpha
+            #total_train_loss += avg_loss1_vertBody.mean() * 10 + avg_loss2_vertBody.mean() * 0.5 + avg_loss3_vertBody.mean() + avg_loss4_vertBody.mean() * alpha
+
             total_train_loss += (dl_rec.mean() + dl_g.mean()) * 20
+
             return fine, loss4, total_train_loss
         elif prefix == "val" or prefix == "test":
             fine_cpu = fine.cpu().numpy()
@@ -616,7 +706,6 @@ class Model(nn.Module):
             # fine_cpu.shape[0] --> number of shapes in the current batch
             nr_shapes = fine_cpu.shape[0]
 
-            # ToDo get the arches directly as a tensor
             # compute the center of mass of the GT shapes
             centers_of_mass = gt.mean(dim=1)
 
