@@ -35,18 +35,18 @@ num_partial_scans_per_mesh: 1
 
 #load_model: log/completeVertLabelmapsExperiment/best_cd_t_network.pth
 
-#path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_training_fullVertlabelmaps.h5
-#path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_validation_fullVertlabelmaps.h5
-#path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_test_fullVertlabelmaps.h5
+path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_training_fullVertlabelmaps.h5
+path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_validation_fullVertlabelmaps.h5
+path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_test_fullVertlabelmaps.h5
 
 #name_folder_to_save_results: completeVertLabelmapsExperiment
 
-load_model: log/wholeSpineExperiment/best_cd_t_network.pth
+load_model: log/vertBodyLabelmaps/best_cd_t_network.pth
 
-path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_training.h5
-path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_validation.h5
-path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_test.h5
-name_folder_to_save_results: completeSpinesExperiments
+#path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_training_vertBodylabelmaps.h5
+#path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_validation_vertBodylabelmaps.h5
+#path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_test_vertBodylabelmaps.h5
+name_folder_to_save_results: test
 
 
 data_to_test: test
@@ -92,4 +92,4 @@ align: False
 save_vis: False
 eval_emd: True
 
-use_labelmaps: False
+use_labelmaps: True

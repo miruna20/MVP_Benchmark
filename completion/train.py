@@ -233,10 +233,8 @@ def train():
 
         # get a dictionary
         param_dict = dict(net.named_parameters())
-        #params_to_log = ["module.feature_selector.fc1.weight",
-        #                 "module.feature_selector.fc2.weight"]
-
-        params_to_log = ["module.feature_selector.fc1.weight"]
+        params_to_log = ["module.feature_selector.fc1.weight",
+                         "module.feature_selector.fc2.weight"]
 
         # access only the feature selector weights
         half_size = 1024
@@ -351,7 +349,7 @@ if __name__ == "__main__":
     args = munch.munchify(yaml.safe_load(open(config_path)))
 
     wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
-    wandb.init(project="Multimodal Shape Completion")
+    run = wandb.init(project="Multimodal Shape Completion",tags=['training'])
     wandb.config.update(args)
 
     torch.cuda.empty_cache()
@@ -370,7 +368,15 @@ if __name__ == "__main__":
         os.makedirs(log_dir)
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'train.log')),
                                                       logging.StreamHandler(sys.stdout)])
+
+
+    # log wandb info
+    logging.info(f"Project URL: {run.get_project_url()}")
+    logging.info(f"Run URL: { run.get_url()}")
+    logging.info(f"Local directory: {run.dir}")
+
     train()
+    wandb.finish()
 
 
 

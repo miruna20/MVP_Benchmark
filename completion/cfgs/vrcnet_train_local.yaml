@@ -1,4 +1,4 @@
-batch_size: 4
+batch_size: 8
 workers: 0
 nepoch: 100
 model_name: vrcnet_multimodal
@@ -17,13 +17,18 @@ num_partial_scans_per_mesh: 1
 #path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_validation_vertbodylabelmaps.h5
 #path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_test_vertbodylabelmaps.h5
 
-#path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_training_fullVertlabelmaps.h5
-#path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_validation_fullVertlabelmaps.h5
-#path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_fullVert/dataset_test_fullVertlabelmaps.h5
+#path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_training_vertBodylabelmaps.h5
+#path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_validation_vertBodylabelmaps.h5
+#path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/with_labelmaps_vertbodies/dataset_test_vertBodylabelmaps.h5
 
-path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_training.h5
-path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_validation.h5
-path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_test.h5
+path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/sanityCheck_noPartialPCDS/dataset_training_vertBodylabelmaps.h5
+path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/sanityCheck_noPartialPCDS/dataset_validation_vertBodylabelmaps.h5
+path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/sanityCheck_noPartialPCDS/dataset_test_vertBodylabelmaps.h5
+
+
+#path_to_train_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_training.h5
+#path_to_val_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_validation.h5
+#path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/completespines_withoutlabelmaps/complete_spines_test.h5
 
 
 
@@ -36,7 +41,7 @@ path_to_test_dataset: /home/miruna/Documents/Data/Completion_Datasets/completesp
 work_dir: log/
 flag: debug
 loss: cd
-manual_seed: null
+manual_seed: 42
 use_mean_feature: False
 step_interval_to_print: 500
 epoch_interval_to_save: 1
@@ -44,7 +49,7 @@ epoch_interval_to_val: 1
 varying_constant: 0.01, 0.1, 0.5, 1
 varying_constant_epochs: 5, 15, 30
 
-lr: 0.001
+lr: 0.0001
 lr_decay: True
 lr_decay_interval: 40
 lr_decay_rate: 0.7
@@ -73,4 +78,4 @@ align: False
 save_vis: False
 eval_emd: False
 
-use_labelmaps: False
+use_labelmaps: True

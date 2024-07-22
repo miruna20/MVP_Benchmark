@@ -6,3 +6,6 @@
 *.h5
 *.backup
 model/
+*.png
+results/
+wandb/

@@ -698,10 +698,13 @@ class Model(nn.Module):
                 gt = np.stack(gts_aligned)
                 gt = torch.tensor(gt).float().to(device)
 
-            # these will be list of tensors and in the end we stack them to one tensor
             cds_p_arch = []
             cds_t_arch = []
             f1s_arch = []
+
+            cds_p_body = []
+            cds_t_body = []
+            f1s_body = []
 
             # fine_cpu.shape[0] --> number of shapes in the current batch
             nr_shapes = fine_cpu.shape[0]
@@ -716,39 +719,44 @@ class Model(nn.Module):
             # Compare each point's y-coordinate with the center of mass y-coordinate
             # shapes[:, :, 1] gives all y-coordinates of all points
             # The comparison results in a boolean mask
-            mask_gt = gt[:, :, 1] > centers_of_mass_y
-            mask_completed = fine[:, :, 1] > centers_of_mass_y
+            mask_gt_arch = gt[:, :, 1] > centers_of_mass_y
+            mask_completed_arch = fine[:, :, 1] > centers_of_mass_y
 
+            # For the vertebral body
+            mask_gt_body = gt[:, :, 1] <= centers_of_mass_y
+            mask_completed_body = fine[:, :, 1] <= centers_of_mass_y
 
             for pcd_idx in range(nr_shapes):
-                gt_arch = gt[pcd_idx][mask_gt[pcd_idx]]
-                completion_arch = fine[pcd_idx][mask_completed[pcd_idx]]
+                gt_arch = gt[pcd_idx][mask_gt_arch[pcd_idx]]
+                completion_arch = fine[pcd_idx][mask_completed_arch[pcd_idx]]
+
+                gt_body = gt[pcd_idx][mask_gt_body[pcd_idx]]
+                completion_body = fine[pcd_idx][mask_completed_body[pcd_idx]]
 
                 """temp for testing"""
-                """
-                # Save gt_arch as a point cloud
-                gt_arch_cpu= gt_arch.cpu().numpy()
-                completion_arch_cpu = completion_arch.cpu().numpy()
 
-                gt_arch_pcd = o3d.geometry.PointCloud()
-                gt_arch_pcd.points = o3d.utility.Vector3dVector(gt_arch_cpu)
-                gt_arch_file = "refactored_vertArch/gt_arch" + str(pcd_idx) + ".pcd"
-                o3d.io.write_point_cloud(gt_arch_file, gt_arch_pcd)
-                print(f"GT arch point cloud saved to {gt_arch_file}")
+                def save_point_cloud(points, filename):
+                    points_cpu = points.cpu().numpy()
+                    pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(points_cpu)
+                    o3d.io.write_point_cloud(filename, pcd)
+                    print(f"Point cloud saved to {filename}")
+                
+                
+                #save_point_cloud(gt_arch, f"gt_arch_{pcd_idx}.pcd")
+                #save_point_cloud(completion_arch, f"completion_arch_{pcd_idx}.pcd")
+                #save_point_cloud(gt_body, f"gt_body_{pcd_idx}.pcd")
+                #save_point_cloud(completion_body, f"completion_body_{pcd_idx}.pcd")
 
-                # Save completion_arch as a point cloud
-                completion_arch_pcd = o3d.geometry.PointCloud()
-                completion_arch_pcd.points = o3d.utility.Vector3dVector(completion_arch_cpu)
-                completion_arch_file = "refactored_vertArch/completion_arch" + str(pcd_idx) + ".pcd"
-                o3d.io.write_point_cloud(completion_arch_file, completion_arch_pcd)
-                print(f"Completion arch point cloud saved to {completion_arch_file}")
-                """
+
                 """temp for testing"""
-
 
                 # add batch size dimension
                 completion_arch = completion_arch[np.newaxis, :, :]
                 gt_arch = gt_arch[np.newaxis, :, :]
+
+                completion_body = completion_body[np.newaxis, :, :]
+                gt_body = gt_body[np.newaxis, :, :]
 
                 # compute here the metrics only for one shape
                 cd_p_arch, cd_t_arch, f1_arch = calc_cd(completion_arch, gt_arch, calc_f1=True)
@@ -756,34 +764,57 @@ class Model(nn.Module):
                 cds_t_arch.append(cd_t_arch)
                 f1s_arch.append(f1_arch)
 
-            cd_p_arch = torch.stack(cds_p_arch)
-            cd_p_arch = torch.reshape(cd_p_arch,(fine_cpu.shape[0],))
-            cd_t_arch = torch.stack(cds_t_arch)
-            cd_t_arch = torch.reshape(cd_t_arch,(fine_cpu.shape[0],))
-            f1_arch = torch.stack(f1s_arch)
-            f1_arch = torch.reshape(f1_arch,(fine_cpu.shape[0],))
+                cd_p_body, cd_t_body, f1_body = calc_cd(completion_body, gt_body, calc_f1=True)
+                cds_p_body.append(cd_p_body)
+                cds_t_body.append(cd_t_body)
+                f1s_body.append(f1_body)
 
+            cd_p_arch = torch.stack(cds_p_arch)
+            cd_p_arch = torch.reshape(cd_p_arch, (fine_cpu.shape[0],))
+            cd_t_arch = torch.stack(cds_t_arch)
+            cd_t_arch = torch.reshape(cd_t_arch, (fine_cpu.shape[0],))
+            f1_arch = torch.stack(f1s_arch)
+            f1_arch = torch.reshape(f1_arch, (fine_cpu.shape[0],))
+
+            cd_p_body = torch.stack(cds_p_body)
+            cd_p_body = torch.reshape(cd_p_body, (fine_cpu.shape[0],))
+            cd_t_body = torch.stack(cds_t_body)
+            cd_t_body = torch.reshape(cd_t_body, (fine_cpu.shape[0],))
+            f1_body = torch.stack(f1s_body)
+            f1_body = torch.reshape(f1_body, (fine_cpu.shape[0],))
 
             if self.eval_emd:
                 emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
-                emd_arch = calc_emd(fine,gt, eps=0.004, iterations=3000)
+                emd_arch = calc_emd(fine, gt, eps=0.004, iterations=3000)
+                emd_body = calc_emd(fine, gt, eps=0.004, iterations=3000)
             else:
                 emd = 0
                 emd_arch = 0
+                emd_body = 0
 
             # compute the metrics for the whole vertebral shape
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
 
-            #return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p, 'cd_t': cd_t,
-            #        'f1': f1, 'emd_arch': emd_arch,'cd_p_arch': cd_p_arch, 'cd_t_arch':cd_t_arch, 'f1_arch':f1_arch}
-            return {'out1': coarse_raw, 'result': fine, 'gt': gt, 'inputs': x_pcd, 'emd': emd, 'cd_p': cd_p,
-                    'cd_t': cd_t,
-                    'f1': f1,
-                    'emd_arch':emd_arch,
-                    'cd_p_arch':cd_p_arch,
-                    'cd_t_arch': cd_t_arch,
-                        'f1_arch':f1_arch}
+            return {
+                'out1': coarse_raw,
+                'result': fine,
+                'gt': gt,
+                'inputs': x_pcd,
+                'emd': emd,
+                'cd_p': cd_p,
+                'cd_t': cd_t,
+                'f1': f1,
+                'emd_arch': emd_arch,
+                'cd_p_arch': cd_p_arch,
+                'cd_t_arch': cd_t_arch,
+                'f1_arch': f1_arch,
+                'emd_body': emd_body,
+                'cd_p_body': cd_p_body,
+                'cd_t_body': cd_t_body,
+                'f1_body': f1_body
+            }
             """
+            # }            
             'emd_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
             'cd_p_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
             'cd_t_arch': torch.empty(f1.shape, dtype=torch.float32).to(device),
