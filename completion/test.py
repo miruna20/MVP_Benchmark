@@ -84,17 +84,20 @@ def test():
         results_list = []
         emd = []
         emd_arch = []
+        emd_body = []
         cd_p = []
         cd_p_arch = []
+        cd_p_body = []  # Add list for vertebral body CD_p
         cd_t = []
         cd_t_arch = []
+        cd_t_body = []  # Add list for vertebral body CD_t
         f1 = []
         f1_arch = []
+        f1_body = []  # Add list for vertebral body F1
         gts_aligned = []
         inputs_aligned = []
         for i, data in enumerate(dataloader_test):
 
-            # inputs_cpu = data
             label, partial_pcd, labelmap, gt = data
 
             partial_pcd = partial_pcd.float().to(device)
@@ -108,76 +111,103 @@ def test():
 
             result_dict = net(partial_pcd, labelmap, gt, prefix=prefix)
 
-            # this updates average metrics
+            # Update average metrics
             for k, v in test_loss_meters.items():
                 v.update(result_dict[k].mean().item())
 
-            # to each category sum up the current results for each metric
-            # for each label
+            # Sum up results for each metric
             for j, l in enumerate(label):
                 for ind, m in enumerate(metrics):
                     test_loss_cat[int(l), ind] += result_dict[m][int(j)]
 
-            # append the current shape completion results to the list
+            # Append shape completion results
             results_list.append(result_dict['result'].cpu().numpy())
-            if(args.eval_emd):
+            if args.eval_emd:
                 emd.append(result_dict['emd'].cpu().numpy())
                 emd_arch.append(result_dict['emd_arch'].cpu().numpy())
+                emd_body.append(result_dict['emd_body'].cpu().numpy())  # Append vertebral body EMD
             cd_p.append(result_dict['cd_p'].cpu().numpy())
             cd_p_arch.append(result_dict['cd_p_arch'].cpu().numpy())
+            cd_p_body.append(result_dict['cd_p_body'].cpu().numpy())  # Append vertebral body CD_p
             cd_t.append(result_dict['cd_t'].cpu().numpy())
             cd_t_arch.append(result_dict['cd_t_arch'].cpu().numpy())
+            cd_t_body.append(result_dict['cd_t_body'].cpu().numpy())  # Append vertebral body CD_t
             f1.append(result_dict['f1'].cpu().numpy())
             f1_arch.append(result_dict['f1_arch'].cpu().numpy())
+            f1_body.append(result_dict['f1_body'].cpu().numpy())  # Append vertebral body F1
             gts_aligned.append(result_dict['gt'].cpu().numpy())
             inputs_aligned.append(result_dict['inputs'].cpu().numpy())
+
             if i % args.step_interval_to_print == 0:
                 logging.info('test [%d/%d]' % (i, dataset_length / args.batch_size))
 
         logging.info('Loss per category:')
-
         category_log = ''
+        table_data = []
+
         for i in range(num_categories):
             category_log += '\ncategory name: %s' % (cat_name[i])
+            row_data = {
+                "Category Name": cat_name[i]
+            }
             for ind, m in enumerate(metrics):
-                scale_factor = 1 if (m == 'f1' or m =='f1_arch') else 10000
+                scale_factor = 1 if m in ['f1', 'f1_arch', 'f1_body'] else 10000
                 category_log += ' %s: %f' % (m, test_loss_cat[i, ind] / cat_num[i] * scale_factor)
+                value = test_loss_cat[i, ind] / cat_num[i] * scale_factor
+                row_data[m] = value.cpu().numpy()[0]
+
+            table_data.append(row_data)
+
         logging.info(category_log)
 
         logging.info('Overview results:')
         overview_log = ''
+        overview_results = []
         for metric, meter in test_loss_meters.items():
-            scale_factor = 1 if (metric == 'f1' or metric== 'f1_arch') else 10000
+            scale_factor = 1 if metric in ['f1', 'f1_arch', 'f1_body'] else 10000
             overview_log += '%s: %f ' % (metric, meter.avg * scale_factor)
+            overview_results.append((metric,meter.avg * scale_factor))
+
         logging.info(overview_log)
 
+        # Concatenate all results
         all_results = np.concatenate(results_list, axis=0)
-        if(args.eval_emd):
+        if args.eval_emd:
             all_emd = np.concatenate(emd, axis=0)
-            all_emd_arch = np.concatenate(emd_arch,axis=0)
+            all_emd_arch = np.concatenate(emd_arch, axis=0)
+            all_emd_body = np.concatenate(emd_body, axis=0)  # Concatenate vertebral body EMD
         all_cd_p = np.concatenate(cd_p, axis=0)
         all_cd_p_arch = np.concatenate(cd_p_arch, axis=0)
+        all_cd_p_body = np.concatenate(cd_p_body, axis=0)  # Concatenate vertebral body CD_p
         all_cd_t = np.concatenate(cd_t, axis=0)
         all_cd_t_arch = np.concatenate(cd_t_arch, axis=0)
+        all_cd_t_body = np.concatenate(cd_t_body, axis=0)  # Concatenate vertebral body CD_t
         all_f1 = np.concatenate(f1, axis=0)
         all_f1_arch = np.concatenate(f1_arch, axis=0)
-        all_gt = np.concatenate(gts_aligned,axis=0)
-        all_inputs = np.concatenate(inputs_aligned,axis=0)
+        all_f1_body = np.concatenate(f1_body, axis=0)  # Concatenate vertebral body F1
+        all_gt = np.concatenate(gts_aligned, axis=0)
+        all_inputs = np.concatenate(inputs_aligned, axis=0)
 
+        # Write results to HDF5 file
         with h5py.File(log_dir + '/results.h5', 'w') as f:
             f.create_dataset('results', data=all_results)
-            if(args.eval_emd):
+            if args.eval_emd:
                 f.create_dataset('emd', data=all_emd)
-                f.create_dataset('emd_arch',data=all_emd_arch)
+                f.create_dataset('emd_arch', data=all_emd_arch)
+                f.create_dataset('emd_body', data=all_emd_body)  # Write vertebral body EMD
             f.create_dataset('cd_p', data=all_cd_p)
             f.create_dataset('cd_p_arch', data=all_cd_p_arch)
+            f.create_dataset('cd_p_body', data=all_cd_p_body)  # Write vertebral body CD_p
             f.create_dataset('cd_t', data=all_cd_t)
             f.create_dataset('cd_t_arch', data=all_cd_t_arch)
+            f.create_dataset('cd_t_body', data=all_cd_t_body)  # Write vertebral body CD_t
             f.create_dataset('f1', data=all_f1)
             f.create_dataset('f1_arch', data=all_f1_arch)
+            f.create_dataset('f1_body', data=all_f1_body)  # Write vertebral body F1
             f.create_dataset('gt', data=all_gt)
-            #f.create_dataset('input_aligned', data=all_inputs)
+            # f.create_dataset('input_aligned', data=all_inputs)  # Uncomment if needed
 
+        # Create submission zip file
         cur_dir = os.getcwd()
         cmd = "cd %s; zip -r submission.zip results.h5 ; cd %s" % (log_dir, cur_dir)
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

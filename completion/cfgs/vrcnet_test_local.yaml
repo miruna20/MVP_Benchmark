@@ -92,9 +92,7 @@ align: False
 save_vis: False
 eval_emd: True
 
-#TODO for exp2 we do not need the Xray segmentations in the first network, we concatenate it before refinement
 use_labelmaps_in_PMNET: False
 
-#TODO for exp2 we need the Xray segmentations before the refinement network
 use_labelmaps_in_RENet: True
 
