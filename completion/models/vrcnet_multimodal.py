@@ -356,7 +356,7 @@ class MSAP_SKN_decoder(nn.Module):
 
         self.af = nn.ReLU(inplace=False)
 
-    def forward(self, global_feat, point_input):
+    def forward(self, global_feat, point_input, use_Xray_segm, Xray_segm):
         batch_size = global_feat.size()[0]
 
         coarse_raw = self.fc3(self.af(self.fc2(self.af(self.fc1(global_feat))))).view(batch_size, 3,
@@ -364,17 +364,31 @@ class MSAP_SKN_decoder(nn.Module):
 
         input_points_num = point_input.size()[2]
         org_points_input = point_input
+        org_Xray_segm = Xray_segm
 
         if self.points_label:
+            # TODO replace this with one hot encodings
             id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
             coarse_input = torch.cat((coarse_raw, id0), 1)
             id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
             org_points_input = torch.cat((org_points_input, id1), 1)
+
+            if(use_Xray_segm):
+                # TODO add here the 3rd point cloud (aka Xray segm) with point labels everywhere 2
+                id2 = torch.full((org_Xray_segm.shape[0], 1, org_Xray_segm.shape[2]),fill_value=2).to(device).contiguous()
+                org_Xray_segm = torch.cat((org_Xray_segm, id2), 1)
+
         else:
             coarse_input = coarse_raw
 
-        points = torch.cat((coarse_input, org_points_input), 2)
+        if use_Xray_segm:
+            points = torch.cat((coarse_input, org_points_input, org_Xray_segm), 2)
+        else:
+            points = torch.cat((coarse_input, org_points_input),2)
+
         dense_feat = self.encoder(points)
+
+        # TODO what size do the dense_feat have here?
 
         if self.up_scale >= 2:
             dense_feat = self.expansion1(dense_feat)
@@ -448,7 +462,10 @@ class Model(nn.Module):
                                         num_coarse_raw=args.num_coarse_raw, layers=layers, knn_list=knn_list,
                                         pk=args.pk, local_folding=args.local_folding, points_label=args.points_label)
         self.feature_selector = MLP_feature_selection(global_feature_size*2)
-        self.use_labelmap = args.use_labelmaps
+        self.use_labelmaps_in_PMNET = args.use_labelmaps_in_PMNET
+        self.use_labelmaps_in_RENet = args.use_labelmaps_in_RENet
+
+
     def compute_kernel(self, x, y):
         x_size = x.size()[0]
         y_size = y.size()[0]
@@ -466,17 +483,24 @@ class Model(nn.Module):
 
     def forward(self, x_pcd, x_labelmap=None, gt=None, prefix="train", mean_feature=None, alpha=None):
 
+        # TODO for exp2 find out where we do the concatenation before passing to ReNET
+
         if prefix == "train":
             y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
 
             gt = torch.cat([gt, gt], dim=0)
             points = torch.cat([x_pcd, y], dim=0)
             x_pcd = torch.cat([x_pcd, x_pcd], dim=0)
+            if(self.use_labelmaps_in_RENet):
+                x_labelmap_for_RENet = torch.cat([x_labelmap, x_labelmap], dim=0)
+
         else:
             points = x_pcd
+            if(self.use_labelmaps_in_RENet):
+                x_labelmap_for_RENet = x_labelmap
 
         feat_pcd = self.encoder_pcd(points)
-        if(self.use_labelmap):
+        if(self.use_labelmaps_in_PMNET):
             feat_x_labelmap = self.encoder_labelmap(x_labelmap)
 
         if prefix == "train":
@@ -484,7 +508,7 @@ class Model(nn.Module):
             feat_x_pcd, feat_y = feat_pcd.chunk(2)
 
             ############ rough completion path ############
-            if (self.use_labelmap):
+            if (self.use_labelmaps_in_PMNET):
                 # concatenate the feature vectors from the partial pcd and from the labelmaps
                 feat_concat = torch.cat([feat_x_pcd,feat_x_labelmap],dim=1)
 
@@ -521,7 +545,7 @@ class Model(nn.Module):
 
         else:
             # concatenate the features from the partial pcd with the ones from the labelmap
-            if(self.use_labelmap):
+            if(self.use_labelmaps_in_PMNET):
 
                 feat_concat = torch.cat([feat_pcd, feat_x_labelmap], dim=1)
                 # pass through one layer to get 1024 features again
@@ -541,7 +565,7 @@ class Model(nn.Module):
 
         feat_pcd += self.generator(z)
 
-        coarse_raw, coarse_high, coarse, fine = self.decoder(feat_pcd, x_pcd)
+        coarse_raw, coarse_high, coarse, fine = self.decoder(feat_pcd, x_pcd, self.use_labelmaps_in_RENet, x_labelmap_for_RENet)
         coarse_raw = coarse_raw.transpose(1, 2).contiguous()
         coarse_high = coarse_high.transpose(1, 2).contiguous()
         coarse = coarse.transpose(1, 2).contiguous()

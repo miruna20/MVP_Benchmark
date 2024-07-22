@@ -23,7 +23,6 @@ from torch.nn.parallel import DistributedDataParallel
 
 
 # import wandb
-#TODO after testing the training pipeline push the changes code to github
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -41,12 +40,14 @@ def train():
     train_loss_meter = AverageValueMeter()
     val_loss_meters = {m: AverageValueMeter() for m in metrics}
 
+    use_labelmaps = (args.use_labelmaps_in_PMNET or args.use_labelmaps_in_RENet)
+
     dataset = verse2020_lumbar(train_path=args.path_to_train_dataset,
                                val_path=args.path_to_val_dataset,
                                test_path=args.path_to_test_dataset,
                                apply_trafo=args.apply_trafo,
                                sigma = args.sigma,
-                               Xray_labelmap=args.use_labelmaps,
+                               Xray_labelmap=use_labelmaps,
                                prefix = "train",
                                num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
                                )
@@ -55,10 +56,10 @@ def train():
                                     test_path=args.path_to_test_dataset,
                                     apply_trafo=args.apply_trafo,
                                     sigma=args.sigma,
-                                    Xray_labelmap=args.use_labelmaps,
+                                    Xray_labelmap=use_labelmaps,
                                     prefix="val",
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh,
-                                   )
+                                    )
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                                             shuffle=True, num_workers=int(args.workers))
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
@@ -158,7 +159,7 @@ def train():
 
             _, partial_pcd, labelmap, gt = data
 
-            if(args.use_labelmaps):
+            if(use_labelmaps):
                 labelmap = labelmap.float().to(device)
                 labelmap = labelmap.transpose(2, 1).contiguous()
 
@@ -167,7 +168,7 @@ def train():
             inputs = partial_pcd[0, :, :].cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
             filename = os.path.join('training_epoch_{:03d}.png'.format(epoch))
-            if (args.use_labelmaps):
+            if (use_labelmaps):
                 labelmap_pcd = labelmap[0,:,:].cpu().numpy().T
                 plot_pcd_one_view(filename=filename,
                                   pcds=[inputs, labelmap_pcd,gt_pcd],
@@ -194,8 +195,8 @@ def train():
             inputs = partial_pcd[0, :, :].cpu().numpy().T
             fine_pcd = out2[0, :, :].detach().cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
-            filename = os.path.join('images/training_epoch_{:03d}.png'.format(epoch))
-            if(args.use_labelmaps):
+            filename = os.path.join('training_epoch_{:03d}.png'.format(epoch))
+            if(use_labelmaps):
                 labelmap_pcd = labelmap[0, :, :].cpu().numpy().T
                 plot_pcd_one_view(filename=filename,
                               pcds=[inputs, labelmap_pcd, fine_pcd, gt_pcd],
@@ -255,10 +256,10 @@ def train():
 
 
         if epoch % args.epoch_interval_to_val == 0 or epoch == args.nepoch - 1:
-            val(net, epoch, val_loss_meters, dataloader_test, best_epoch_losses)
+            val(net, epoch, val_loss_meters, dataloader_test, best_epoch_losses, use_labelmaps)
 
 
-def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses):
+def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses, use_XraySegm):
     logging.info('Testing...')
     for v in val_loss_meters.values():
         v.reset()
@@ -274,7 +275,7 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             inputs = partial_pcd[0, :, :].cpu().numpy()
             gt_pcd = gt[0, :, :].cpu().numpy()
             filename = os.path.join('validation_epoch_{:03d}.png'.format(curr_epoch_num))
-            if(args.use_labelmaps):
+            if(use_XraySegm):
                 labelmap_pcd = labelmap[0,:,:].cpu().numpy()
                 plot_pcd_one_view(filename=filename,
                                   pcds=[inputs, labelmap_pcd,gt_pcd],
@@ -290,7 +291,7 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
 
-            if(args.use_labelmaps):
+            if(use_XraySegm):
                 labelmap = labelmap.float().to(device)
                 labelmap = labelmap.transpose(2, 1).contiguous()
 
@@ -304,8 +305,8 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             fine_pcd = result_dict["result"][0, :, :].cpu().numpy()
             coarse_pcd = result_dict["out1"][0, :, :].cpu().numpy()
             gt_pcd = result_dict["gt"][0, :, :].cpu().numpy()
-            filename = os.path.join('images/validation_epoch_{:03d}.png'.format(curr_epoch_num))
-            if(args.use_labelmaps):
+            filename = os.path.join('validation_epoch_{:03d}.png'.format(curr_epoch_num))
+            if(use_XraySegm):
                 labelmap_pcd = labelmap[0, :, :].cpu().numpy().T
                 plot_pcd_one_view(filename=filename,
                                   pcds=[inputs, labelmap_pcd, coarse_pcd, fine_pcd, gt_pcd],
@@ -351,7 +352,7 @@ if __name__ == "__main__":
     args = munch.munchify(yaml.safe_load(open(config_path)))
 
     wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
-    wandb.init(project="Multimodal Shape Completion")
+    run = wandb.init(project="Multimodal Shape Completion")
     wandb.config.update(args)
 
     torch.cuda.empty_cache()
@@ -370,7 +371,13 @@ if __name__ == "__main__":
         os.makedirs(log_dir)
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'train.log')),
                                                       logging.StreamHandler(sys.stdout)])
+
+    logging.info(f"Project URL: {run.get_project_url()}")
+    logging.info(f"Run URL: {run.get_url()}")
+    logging.info(f"Local directory: {run.dir}")
+
     train()
 
+    wandb.finish()
 
 

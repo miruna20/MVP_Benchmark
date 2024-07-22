@@ -14,7 +14,10 @@ import torch.nn.functional as F
 # from chamfer3D import dist_chamfer_3D
 # from fscore import fscore
 
-#sys.path.append("utils")
+#sys.path.append("~/Documents/Code/Experimental_code/Combination_at_refinement/MVP_Benchmark/utils")
+#import ../utils
+sys.path.append("..")
+import utils
 from utils.metrics import cd, fscore, emd
 from mmcv.ops import furthest_point_sample, gather_points, grouping_operation, ball_query, three_nn
 

@@ -23,12 +23,15 @@ def test():
     logging.info(str(args))
 
     prefix = args.data_to_test
+
+    use_labelmaps = (args.use_labelmaps_in_PMNET or args.use_labelmaps_in_RENet)
+
     dataset_test = verse2020_lumbar(train_path=args.path_to_train_dataset,
                                     val_path=args.path_to_val_dataset,
                                     test_path=args.path_to_test_dataset,
                                     apply_trafo=args.apply_trafo,
                                     sigma = args.sigma,
-                                    Xray_labelmap=args.use_labelmaps,
+                                    Xray_labelmap=use_labelmaps,
                                     prefix=prefix,
                                     num_partial_scans_per_mesh=args.num_partial_scans_per_mesh)
     dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,
@@ -97,7 +100,7 @@ def test():
             partial_pcd = partial_pcd.float().to(device)
             partial_pcd = partial_pcd.transpose(2, 1).contiguous()
 
-            if (args.use_labelmaps):
+            if (use_labelmaps):
                 labelmap = labelmap.float().to(device)
                 labelmap = labelmap.transpose(2, 1).contiguous()
 
