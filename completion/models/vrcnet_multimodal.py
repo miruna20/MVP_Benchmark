@@ -491,13 +491,11 @@ class Model(nn.Module):
             gt = torch.cat([gt, gt], dim=0)
             points = torch.cat([x_pcd, y], dim=0)
             x_pcd = torch.cat([x_pcd, x_pcd], dim=0)
-            if(self.use_labelmaps_in_RENet):
-                x_labelmap_for_RENet = torch.cat([x_labelmap, x_labelmap], dim=0)
+            x_labelmap_for_RENet = torch.cat([x_labelmap, x_labelmap], dim=0)
 
         else:
             points = x_pcd
-            if(self.use_labelmaps_in_RENet):
-                x_labelmap_for_RENet = x_labelmap
+            x_labelmap_for_RENet = x_labelmap
 
         feat_pcd = self.encoder_pcd(points)
         if(self.use_labelmaps_in_PMNET):

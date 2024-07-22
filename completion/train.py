@@ -226,12 +226,6 @@ def train():
             save_model(model_path, net, net_d=net_d)
             logging.info("Saving net...")
 
-        """
-        artifact = wandb.Artifact(f'model-epoch-{epoch}', type='model')
-        artifact.add_file(model_path)
-        wandb.log_artifact(artifact)
-        """
-
         # get a dictionary
         param_dict = dict(net.named_parameters())
         params_to_log = ["module.feature_selector.fc1.weight",
@@ -326,7 +320,14 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
             if (val_loss_meters[loss_type].avg < curr_best_loss and loss_type != 'f1') or \
                     (val_loss_meters[loss_type].avg > curr_best_loss and loss_type == 'f1'):
                 best_epoch_losses[loss_type] = (curr_epoch_num, val_loss_meters[loss_type].avg)
-                save_model('%s/best_%s_network.pth' % (log_dir, loss_type), net)
+
+                # save best model locally and to wandb
+                model_path = '%s/best_%s_network.pth' % (log_dir, loss_type)
+                save_model(model_path, net)
+                model_artifact = wandb.Artifact('best_model', type='model')
+                model_artifact.add_file(model_path)
+                wandb.log_artifact(model_artifact)
+
                 logging.info('Best %s net saved!' % loss_type)
                 best_log += fmt % (loss_type, best_epoch_losses[loss_type][1], best_epoch_losses[loss_type][0])
             else:
