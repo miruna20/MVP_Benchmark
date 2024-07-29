@@ -13,6 +13,7 @@ from train_utils import *
 from dataset import verse2020_lumbar
 import time
 import warnings
+import wandb
 
 warnings.filterwarnings("ignore")
 
@@ -53,9 +54,9 @@ def test():
 
     # metrics we would like to compute
     if(args.eval_emd):
-        metrics = ['cd_p', 'cd_p_arch', 'cd_t', 'cd_t_arch', 'emd', 'emd_arch', 'f1', 'f1_arch']
+        metrics = ['cd_p', 'cd_p_arch', 'cd_p_body', 'cd_t', 'cd_t_arch', 'cd_t_body', 'emd', 'emd_arch','emd_body', 'f1', 'f1_arch','f1_body']
     else:
-        metrics = ['cd_p','cd_p_arch', 'cd_t','cd_t_arch', 'f1','f1_arch']
+        metrics = ['cd_p', 'cd_p_arch', 'cd_p_body', 'cd_t', 'cd_t_arch', 'cd_t_body', 'f1', 'f1_arch', 'f1_body']
 
     # dictionary with all of the metrics
     test_loss_meters = {m: AverageValueMeter() for m in metrics}
@@ -159,6 +160,8 @@ def test():
             table_data.append(row_data)
 
         logging.info(category_log)
+        # Log the text data
+        wandb.log({"Per category results": category_log})
 
         logging.info('Overview results:')
         overview_log = ''
@@ -169,6 +172,7 @@ def test():
             overview_results.append((metric,meter.avg * scale_factor))
 
         logging.info(overview_log)
+        wandb.log({"Overview Results": category_log})
 
         # Concatenate all results
         all_results = np.concatenate(results_list, axis=0)
@@ -224,6 +228,10 @@ if __name__ == "__main__":
     config_path = arg.config
     args = munch.munchify(yaml.safe_load(open(config_path)))
 
+    wandb.login(key="845cb3b94791a8d541b28fd3a9b2887374fe8b2c")
+    run = wandb.init(project="Multimodal Shape Completion",tags=['inference'])
+    wandb.config.update(args)
+
     if not args.load_model:
         raise ValueError('Model path must be provided to load model!')
 
@@ -237,4 +245,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler(os.path.join(log_dir, 'test.log')),
                                                       logging.StreamHandler(sys.stdout)])
 
+    logging.info(f"Project URL: {run.get_project_url()}")
+    logging.info(f"Run URL: { run.get_url()}")
+    logging.info(f"Local directory: {run.dir}")
+
     test()
+    wandb.finish()
