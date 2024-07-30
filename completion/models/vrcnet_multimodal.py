@@ -321,7 +321,7 @@ class MSAP_SKN_decoder(nn.Module):
         self.expand_feature_size = 64
 
         if points_label:
-            self.input_size = 4
+            self.input_size = 6
         else:
             self.input_size = 3
 
@@ -366,17 +366,21 @@ class MSAP_SKN_decoder(nn.Module):
         org_points_input = point_input
         org_Xray_segm = Xray_segm
 
+
         if self.points_label:
-            # TODO replace this with one hot encodings
-            id0 = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
-            coarse_input = torch.cat((coarse_raw, id0), 1)
-            id1 = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
-            org_points_input = torch.cat((org_points_input, id1), 1)
+            id0_coarse = torch.zeros(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
+            id1_coarse = torch.ones(coarse_raw.shape[0], 1, coarse_raw.shape[2]).to(device).contiguous()
+            coarse_input = torch.cat((coarse_raw, id1_coarse, id0_coarse, id0_coarse), 1)
+
+
+            id0_orig = torch.zeros(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
+            id1_orig = torch.ones(org_points_input.shape[0], 1, org_points_input.shape[2]).to(device).contiguous()
+            org_points_input = torch.cat((org_points_input, id0_orig, id1_orig, id0_orig), 1)
 
             if(use_Xray_segm):
-                # TODO add here the 3rd point cloud (aka Xray segm) with point labels everywhere 2
-                id2 = torch.full((org_Xray_segm.shape[0], 1, org_Xray_segm.shape[2]),fill_value=2).to(device).contiguous()
-                org_Xray_segm = torch.cat((org_Xray_segm, id2), 1)
+                id0_Xraysegm = torch.zeros(org_Xray_segm.shape[0], 1, org_Xray_segm.shape[2]).to(device).contiguous()
+                id1_Xraysegm = torch.ones(org_Xray_segm.shape[0], 1, org_Xray_segm.shape[2]).to(device).contiguous()
+                org_Xray_segm = torch.cat((org_Xray_segm, id0_Xraysegm, id0_Xraysegm, id1_Xraysegm), 1)
 
         else:
             coarse_input = coarse_raw
@@ -387,8 +391,6 @@ class MSAP_SKN_decoder(nn.Module):
             points = torch.cat((coarse_input, org_points_input),2)
 
         dense_feat = self.encoder(points)
-
-        # TODO what size do the dense_feat have here?
 
         if self.up_scale >= 2:
             dense_feat = self.expansion1(dense_feat)
