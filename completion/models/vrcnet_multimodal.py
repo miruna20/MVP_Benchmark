@@ -704,7 +704,7 @@ class Model(nn.Module):
                     GT_pcd.points = o3d.utility.Vector3dVector(gt_cpu[pcd_idx])
 
                     # perform the registration
-                    reg_p2p = o3d.registration.registration_icp(GT_pcd, completion_pcd, 0.02)
+                    reg_p2p = o3d.pipelines.registration.registration_icp(GT_pcd, completion_pcd, 0.02)
 
                     # apply trafo on the GT pcd
                     GT_pcd.transform(reg_p2p.transformation)
