@@ -324,9 +324,9 @@ def val(net, curr_epoch_num, val_loss_meters, dataloader_test, best_epoch_losses
                 # save best model locally and to wandb
                 model_path = '%s/best_%s_network.pth' % (log_dir, loss_type)
                 save_model(model_path, net)
-                model_artifact = wandb.Artifact('best_model', type='model')
-                model_artifact.add_file(model_path)
-                wandb.log_artifact(model_artifact)
+                #model_artifact = wandb.Artifact('best_model', type='model')
+                #model_artifact.add_file(model_path)
+                #wandb.log_artifact(model_artifact)
 
                 logging.info('Best %s net saved!' % loss_type)
                 best_log += fmt % (loss_type, best_epoch_losses[loss_type][1], best_epoch_losses[loss_type][0])

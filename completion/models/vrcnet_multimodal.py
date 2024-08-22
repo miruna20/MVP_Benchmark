@@ -485,8 +485,6 @@ class Model(nn.Module):
 
     def forward(self, x_pcd, x_labelmap=None, gt=None, prefix="train", mean_feature=None, alpha=None):
 
-        # TODO for exp2 find out where we do the concatenation before passing to ReNET
-
         if prefix == "train":
             y = gather_points(gt.transpose(1, 2).contiguous(), furthest_point_sample(gt, self.num_points))
 
@@ -725,10 +723,12 @@ class Model(nn.Module):
             cds_p_arch = []
             cds_t_arch = []
             f1s_arch = []
+            emds_arch = []
 
             cds_p_body = []
             cds_t_body = []
             f1s_body = []
+            emds_body = []
 
             # fine_cpu.shape[0] --> number of shapes in the current batch
             nr_shapes = fine_cpu.shape[0]
@@ -793,6 +793,13 @@ class Model(nn.Module):
                 cds_t_body.append(cd_t_body)
                 f1s_body.append(f1_body)
 
+                if self.eval_emd:
+                    emd_arch = calc_emd(completion_arch, gt_arch, eps=0.004, iterations=3000)
+                    emds_arch.append(emd_arch)
+                    emd_body = calc_emd(completion_body,gt_body, eps=0.004, iterations=3000)
+                    emds_body.append(emd_body)
+
+
             cd_p_arch = torch.stack(cds_p_arch)
             cd_p_arch = torch.reshape(cd_p_arch, (fine_cpu.shape[0],))
             cd_t_arch = torch.stack(cds_t_arch)
@@ -808,13 +815,21 @@ class Model(nn.Module):
             f1_body = torch.reshape(f1_body, (fine_cpu.shape[0],))
 
             if self.eval_emd:
-                emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
-                emd_arch = calc_emd(fine, gt, eps=0.004, iterations=3000)
-                emd_body = calc_emd(fine, gt, eps=0.004, iterations=3000)
+                emd_arch = torch.stack(emds_arch)
+                emd_arch = torch.reshape(emd_arch, (fine_cpu.shape[0],))
+
+                emd_body = torch.stack(emds_body)
+                emd_body = torch.reshape(emd_body, (fine_cpu.shape[0],))
             else:
-                emd = 0
                 emd_arch = 0
                 emd_body = 0
+
+
+
+            if self.eval_emd:
+                emd = calc_emd(fine, gt, eps=0.004, iterations=3000)
+            else:
+                emd = 0
 
             # compute the metrics for the whole vertebral shape
             cd_p, cd_t, f1 = calc_cd(fine, gt, calc_f1=True)
