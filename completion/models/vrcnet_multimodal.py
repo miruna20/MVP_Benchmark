@@ -779,6 +779,7 @@ class Model(nn.Module):
                 completion_arch = completion_arch[np.newaxis, :, :]
                 gt_arch = gt_arch[np.newaxis, :, :]
 
+
                 completion_body = completion_body[np.newaxis, :, :]
                 gt_body = gt_body[np.newaxis, :, :]
 
@@ -794,8 +795,21 @@ class Model(nn.Module):
                 f1s_body.append(f1_body)
 
                 if self.eval_emd:
+                    # we can only compare point clouds with the same number of points through EMD
+
+                    # we can only compare point clouds with the same number of points through EMD
+                    if completion_arch.shape[1] != gt_arch.shape[1]:
+                        # shape of the point clouds need to be B x N x 3
+                        gt_arch = gather_points(gt_arch.transpose(1, 2).contiguous(), furthest_point_sample(gt_arch, 1024)).transpose(1, 2)
+                        completion_arch = gather_points(completion_arch.transpose(1, 2).contiguous(), furthest_point_sample(completion_arch, 1024)).transpose(1, 2)
+
                     emd_arch = calc_emd(completion_arch, gt_arch, eps=0.004, iterations=3000)
                     emds_arch.append(emd_arch)
+
+                    if completion_body.shape[1] != gt_body.shape[1]:
+                        gt_body = gather_points(gt_body.transpose(1, 2).contiguous(), furthest_point_sample(gt_body, 1024)).transpose(1, 2)
+                        completion_body = gather_points(completion_body.transpose(1, 2).contiguous(), furthest_point_sample(completion_body, 1024)).transpose(1, 2)
+
                     emd_body = calc_emd(completion_body,gt_body, eps=0.004, iterations=3000)
                     emds_body.append(emd_body)
 
