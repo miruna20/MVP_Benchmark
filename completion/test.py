@@ -144,7 +144,7 @@ def test():
 
             gt = gt.float().to(device)
 
-            result_dict = net(partial_pcd, labelmap, gt, prefix=prefix)
+            result_dict = net(partial_pcd, labelmap, gt, prefix="test")
 
             # Update average metrics and collect results
             for k, v in test_loss_meters.items():

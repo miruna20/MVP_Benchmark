@@ -68,6 +68,6 @@ align: False
 save_vis: False
 eval_emd: False
 
-use_labelmaps_in_PMNET: False
+use_labelmaps_in_PMNET: True
 
-use_labelmaps_in_RENet: False
+use_labelmaps_in_RENet: True

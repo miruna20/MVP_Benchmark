@@ -798,7 +798,7 @@ class Model(nn.Module):
                     # we can only compare point clouds with the same number of points through EMD
 
                     # we can only compare point clouds with the same number of points through EMD
-                    if completion_arch.shape[1] != gt_arch.shape[1]:
+                    if completion_arch.shape[1] != 1024 or gt_arch.shape[1] != 1024:
                         # shape of the point clouds need to be B x N x 3
                         gt_arch = gather_points(gt_arch.transpose(1, 2).contiguous(), furthest_point_sample(gt_arch, 1024)).transpose(1, 2)
                         completion_arch = gather_points(completion_arch.transpose(1, 2).contiguous(), furthest_point_sample(completion_arch, 1024)).transpose(1, 2)
@@ -806,7 +806,7 @@ class Model(nn.Module):
                     emd_arch = calc_emd(completion_arch, gt_arch, eps=0.004, iterations=3000)
                     emds_arch.append(emd_arch)
 
-                    if completion_body.shape[1] != gt_body.shape[1]:
+                    if completion_body.shape[1] != 1024 or gt_body.shape[1] != 1024:
                         gt_body = gather_points(gt_body.transpose(1, 2).contiguous(), furthest_point_sample(gt_body, 1024)).transpose(1, 2)
                         completion_body = gather_points(completion_body.transpose(1, 2).contiguous(), furthest_point_sample(completion_body, 1024)).transpose(1, 2)
 
